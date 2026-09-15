@@ -59,7 +59,11 @@ report_output.txt
 speaker/data/
 *.log
 
-# ===== AI 模型大文件（超限或体积过大，需按 README 指引自行下载）=====
+# ===== 本地操作文档（不提交）=====
+GitHub项目上传指南.md
+release_notes.md
+
+# ===== 模型大文件（超限或体积过大，需按 README 指引自行下载）=====
 speaker/models/**/*.onnx
 speaker/models/**/*.bin
 speaker/models/**/*.gguf
