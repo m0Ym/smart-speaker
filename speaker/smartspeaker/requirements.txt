@@ -1,0 +1,42 @@
+# ============================================================
+# USTB AI Speaker - 语音核心依赖
+# 安装：pip install -r requirements.txt
+# 可选依赖按功能分组，缺失时对应模块自动降级（Mock 实现）
+# ============================================================
+
+# ---------- 核心依赖（必装） ----------
+numpy>=1.21
+scipy>=1.7
+sounddevice>=0.4.6          # 音频采集 / 播放
+soundfile>=0.10
+webrtcvad>=2.0.10           # 语音活动检测（VAD）
+sherpa-onnx>=1.10           # ASR / TTS 推理框架
+kaldi-native-fbank>=1.0     # sherpa-onnx 配套特征提取
+pydantic>=2.0               # 类型安全配置
+python-dotenv>=1.0          # .env 配置加载
+websockets>=10              # WebSocket 状态广播
+cryptography>=41.0          # 影子案例加密
+opencv-python>=4.8          # 视觉 / 图像处理
+psutil>=5.9                 # 系统遥测
+pyttsx3>=2.90               # TTS 兜底引擎
+edge-tts>=6.1               # 在线 TTS 引擎（可选在线回退）
+
+# ---------- 可选：唤醒词（默认使用 Mock 时可省略） ----------
+# pvporcupine>=3.0
+
+# ---------- 可选：本地 LLM 对话（离线大模型推理） ----------
+# llama-cpp-python>=0.2.0
+
+# ---------- 可选：Whisper 系列 ASR 引擎 ----------
+# openai-whisper>=20231117
+# faster-whisper>=1.0
+
+# ---------- 可选：手势识别 / 双目视觉 ----------
+# mediapipe>=0.10
+# mediapipe-solutions>=0.10
+
+# ---------- 可选：pywebview 桌面仪表盘 ----------
+# pywebview>=5.0
+# PyQt6>=6.5
+
+# 体感切水果游戏额外依赖见：speaker/LinuxFruitV2/requirements.txt

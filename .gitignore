@@ -52,16 +52,8 @@ docs/
 *.xlsx
 *.xls
 project-reflections.html
-验收要求_提取.md
 report_output.txt
-嵌入式本地智能语音音箱 - 产品手册(1).pdf
-课程结课考核报告马远盟-生产实习.docx
-项目报告_step1.docx
-项目验收文件提交要求.docx
-马远盟_生产实习结课考核报告.docx
-验收汇报PPT_*.pptx
-USTB_AI_Speaker_最终完美排版*.docx
-USTB_AI_Speaker_最终完美排版*.pdf
+验收要求_提取.md
 
 # ===== 运行数据（日志 / 音乐）=====
 speaker/data/
