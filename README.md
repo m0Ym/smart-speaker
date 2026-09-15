@@ -7,7 +7,6 @@
 本地唤醒 · 语音对话 · 音乐播放 · 智能家居 · 手势体感游戏 · 科幻实时仪表盘
 
 ![Python](https://img.shields.io/badge/Python-3.8+-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 ![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20Windows%20%7C%20WSL2-blue?style=for-the-badge)
 ![ASR](https://img.shields.io/badge/ASR-sherpa--onnx%20%7C%20Paraformer-orange?style=for-the-badge)
 ![TTS](https://img.shields.io/badge/TTS-VITS%20%7C%20EdgeTTS-yellow?style=for-the-badge)
@@ -30,8 +29,7 @@
 - [项目结构](#-项目结构)
 - [模型说明](#-模型说明)
 - [部署到音箱硬件](#-部署到音箱硬件)
-- [贡献指南](#-贡献指南)
-- [许可证](#-许可证)
+- [已知限制](#-已知限制)
 
 ---
 
@@ -55,7 +53,7 @@
 | 🔊 **多引擎语音合成** | VITS（Piper 小雅）/ Edge-TTS / pyttsx3 / eSpeak-NG 自动降级链 |
 | 🔇 **专业音频链路** | AEC 回声消除 → 带通滤波 → 谱减法降噪 → WebRTC VAD → 能量门控 |
 | 🎵 **音乐播放** | 本地音乐库管理、播放/暂停/切歌/音量，全局单例播放器防状态不同步 |
-| 🏠 **智能家居** | 可扩展的语音控制技能框架，覆盖灯光、空调等场景 |
+| 🏠 **智能家居** | 语音控制框架（Matter 协议），支持灯/空调/窗帘等场景 ⚠️ *仅框架实现，未在真实场景联调* |
 | ✋ **手势控制** | MediaPipe 实时手势识别（手指伸展分类、挥手检测），支持语音与手势双模态控制 |
 | 📐 **双目深度估计** | OpenCV SGBM 立体匹配 → 视差图 → 物理距离估算，用于空间感知 |
 | 🍉 **体感切水果** | 手势驱动的切水果游戏：One Euro 滤波 + 速度估计 + 运动预测，端到端延迟可观测 |
@@ -300,7 +298,7 @@ IDLE → WAKED_UP → LISTENING → PROCESSING → SPEAKING → IDLE
 | `alarm` 闹钟 | "设置一个闹钟" | 定时任务 |
 | `joke` 笑话 | "讲个笑话" | 随机笑话库 |
 | `chat` 闲聊 | 日常对话 | LLM / 规则 |
-| `smarthome` 智能家居 | "打开客厅的灯" | 指令框架（可扩展） |
+| `smarthome` 智能家居 | "打开客厅的灯" | Matter 指令框架 ⚠️ 未真实联调（见已知限制） |
 | `fruit_ninja` 切水果 | "打开切水果" | 启动体感游戏服务 |
 | `gesture` 手势 | 手势切换 | 视觉手势识别联动 |
 | `system_command` 系统命令 | "关机" / "打开应用" | 白名单安全执行 |
@@ -481,36 +479,29 @@ journalctl -u smart-speaker -f     # 查看日志
 
 ### WSL2 开发环境
 
-WSL2 默认无音频设备，可通过 PulseAudio 转发或 usbipd USB 直通启用（详见项目 `docs` 目录的部署文档）。
+WSL2 默认无音频设备，可通过 **PulseAudio 转发**（Windows 端运行 PulseAudio，WSL 端 `export PULSE_SERVER=tcp:<host-ip>`）或 **usbipd USB 设备直通** 启用音频。
 
 ---
 
-## 🤝 贡献指南
+## ⚠️ 已知限制
 
-欢迎贡献代码、文档或想法！
+以下能力受**开发时间与场地条件限制**，尚未在真实场景中完成验证，评估或使用时请注意：
 
-1. Fork 本仓库并创建你的分支：`git checkout -b feat/your-feature`
-2. 提交改动：`git commit -m "feat: add your feature"`
-3. 推送分支：`git push origin feat/your-feature`
-4. 发起 Pull Request
+### 智能家居控制（仅框架实现）
 
-**开发约定**：
-- 新技能：继承 `BaseSkill`，在 `SkillFactory` 注册
-- 新 AI 引擎：实现对应 `Strategy` 接口
-- 代码风格：遵循 PEP 8，模块需带 docstring
-- 涉及配置：同步更新 `config.py` 与本文档配置参考
+`smarthome` 技能已完成 **Matter 协议客户端**与语音指令解析框架（覆盖灯 / 空调 / 窗帘等设备类型的开关、亮度、温度控制指令），但**未接入真实智能家居硬件进行联调验证**。当前运行使用内置模拟设备（客厅灯、卧室灯、空调等）演示完整指令链路：
 
----
+```
+语音指令 → 意图识别 → SmartHomeSkill → MatterClient（未连接时回退模拟设备）→ 控制结果回读
+```
 
-## 📄 许可证
+如需接入真实设备：
 
-本项目基于 [MIT License](LICENSE) 开源。
+1. 部署 Matter 服务器（如 Home Assistant + Matter Server，WebSocket 端口 `5580`）
+2. 确认 `SmartHomeSkill._init_matter()` 中的设备发现与状态同步逻辑
+3. 建议先在模拟设备上验证语音指令链路，再切换至真实设备
 
-## 🙏 致谢
+### 其他说明
 
-- [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) — 高性能离线语音推理框架
-- [llama.cpp](https://github.com/ggml-org/llama.cpp) — 本地大模型推理
-- [Piper](https://github.com/rhasspy/piper) — 中文 VITS 语音合成
-- [MediaPipe](https://github.com/google-ai-edge/mediapipe) — 手部关键点追踪
-- [Picovoice Porcupine](https://github.com/Picovoice/porcupine) — 唤醒词检测
-- [pywebview](https://github.com/r0x0r/pywebview) — 轻量桌面 WebView
+- 双目深度估计与手势识别依赖摄像头硬件，开发环境中部分算法以模拟数据兜底，精度需在目标硬件上重新标定（双目基线 / 焦距）。
+- Porcupine 唤醒词需要 Picovoice Access Key（未配置时自动回退 Mock 唤醒词）。
