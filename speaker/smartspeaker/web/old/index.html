@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>USTB AI Speaker - 小智</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        :root {
+            --primary: #6366f1; --primary-dark: #4f46e5; --primary-light: #818cf8;
+            --secondary: #f472b6; --accent: #22d3ee; --success: #10b981; --warning: #f59e0b; --danger: #ef4444;
+            --ustb-blue: #004098; --ustb-gold: #c9a227;
+            --bg-0: #050510; --bg-1: #0a0a1a; --bg-2: #121225; --bg-card: rgba(18, 18, 37, 0.75);
+            --text-primary: #ffffff; --text-secondary: rgba(255,255,255,0.75); --text-muted: rgba(255,255,255,0.45);
+            --transition-fast: 0.15s cubic-bezier(0.4,0,0.2,1);
+            --transition-normal: 0.3s cubic-bezier(0.4,0,0.2,1);
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; background: var(--bg-0); color: var(--text-primary); overflow: hidden; height: 100vh; width: 100vw; -webkit-font-smoothing: antialiased; }
+        .app-container { position: relative; height: 100%; width: 100%; display: flex; flex-direction: column; overflow: hidden; }
+
+        /* 动态背景 */
+        .background-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
+        .bg-grid { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(rgba(99,102,241,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(99,102,241,0.05) 1px, transparent 1px); background-size: 40px 40px; transform: perspective(500px) rotateX(60deg) translateY(-120px) scale(2); animation: gridMove 20s linear infinite; opacity: 0.4; }
+        @keyframes gridMove { 0% { background-position: 0 0; } 100% { background-position: 0 40px; } }
+        .bg-gradient { position: absolute; width: 100%; height: 100%; background: radial-gradient(ellipse at 20% 0%, rgba(99,102,241,0.15) 0%, transparent 45%), radial-gradient(ellipse at 80% 100%, rgba(244,114,182,0.1) 0%, transparent 45%), radial-gradient(ellipse at 50% 50%, rgba(34,211,238,0.05) 0%, transparent 55%), var(--bg-0); }
+        .bg-scanline { position: absolute; width: 100%; height: 4px; background: linear-gradient(90deg, transparent, rgba(99,102,241,0.15), transparent); animation: scanline 6s linear infinite; opacity: 0.6; }
+        @keyframes scanline { 0% { top: -10%; } 100% { top: 110%; } }
+        .particles { position: absolute; width: 100%; height: 100%; overflow: hidden; }
+        .particle { position: absolute; width: 3px; height: 3px; background: rgba(99,102,241,0.5); border-radius: 50%; animation: floatUp 8s linear infinite; }
+        @keyframes floatUp { 0% { transform: translateY(100vh) scale(0); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { transform: translateY(-10vh) scale(1); opacity: 0; } }
+
+        /* 顶部栏 */
+        .header { position: relative; z-index: 100; padding: 14px 18px; padding-top: max(14px, env(safe-area-inset-top)); display: flex; justify-content: space-between; align-items: center; background: linear-gradient(to bottom, rgba(5,5,16,0.95), transparent); }
+        .header-left { display: flex; align-items: center; gap: 10px; }
+        .ustb-badge { width: 40px; height: 40px; border-radius: 12px; background: var(--ustb-blue); border: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; color: #fff; text-align: center; line-height: 1.1; position: relative; overflow: hidden; }
+        .ustb-badge::after { content: 'USTB'; position: absolute; font-size: 8px; bottom: 3px; color: var(--ustb-gold); font-weight: 600; }
+        .brand-name { font-size: 16px; font-weight: 700; letter-spacing: 0.5px; background: linear-gradient(135deg, #fff 0%, var(--primary-light) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .header-right { display: flex; align-items: center; gap: 10px; }
+        .header-btn { width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 15px; transition: all var(--transition-fast); backdrop-filter: blur(8px); }
+        .header-btn:hover { background: rgba(255,255,255,0.1); color: var(--text-primary); }
+        .header-btn.exit:hover { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.3); color: var(--danger); }
+        .header-btn:active { transform: scale(0.9); }
+        .status-badge { display: flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 999px; background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.25); font-size: 11px; color: var(--success); }
+        .status-badge.disconnected { background: rgba(239,68,68,0.12); border-color: rgba(239,68,68,0.25); color: var(--danger); }
+        .status-badge.connecting { background: rgba(245,158,11,0.12); border-color: rgba(245,158,11,0.25); color: var(--warning); }
+        .status-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; animation: statusPulse 2s ease-in-out infinite; }
+        @keyframes statusPulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.8); } }
+
+        /* 主内容区 */
+        .main-content { position: relative; z-index: 10; flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 0 16px; }
+
+        /* 助手全息展示区 */
+        .holo-section { position: relative; padding: 12px 0 8px; display: flex; flex-direction: column; align-items: center; }
+        .holo-frame { position: relative; width: 180px; height: 180px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .holo-ring { position: absolute; border-radius: 50%; border: 2px solid transparent; border-top-color: var(--primary); border-right-color: var(--accent); animation: holoSpin 3s linear infinite; }
+        .holo-ring:nth-child(1) { width: 100%; height: 100%; }
+        .holo-ring:nth-child(2) { width: 120%; height: 120%; animation-duration: 5s; animation-direction: reverse; opacity: 0.6; }
+        .holo-ring:nth-child(3) { width: 140%; height: 140%; animation-duration: 7s; opacity: 0.3; border-top-color: var(--secondary); border-right-color: var(--primary); }
+        @keyframes holoSpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .holo-glow { position: absolute; width: 100%; height: 100%; border-radius: 50%; background: radial-gradient(circle, rgba(99,102,241,0.25) 0%, transparent 70%); animation: holoPulse 2s ease-in-out infinite; }
+        @keyframes holoPulse { 0%,100% { opacity: 0.5; transform: scale(1); } 50% { opacity: 0.9; transform: scale(1.1); } }
+        .holo-avatar { position: relative; width: 140px; height: 140px; border-radius: 50%; overflow: hidden; border: 3px solid rgba(99,102,241,0.4); box-shadow: 0 0 40px rgba(99,102,241,0.3), inset 0 0 30px rgba(99,102,241,0.1); z-index: 2; }
+        .holo-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .holo-avatar::after { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, rgba(99,102,241,0.1) 0%, transparent 50%, rgba(34,211,238,0.1) 100%); }
+        .holo-base { position: absolute; bottom: -25px; left: 50%; transform: translateX(-50%); width: 140px; height: 30px; background: radial-gradient(ellipse, rgba(99,102,241,0.3) 0%, transparent 70%); border-radius: 50%; }
+        .holo-scan { position: absolute; top: 0; left: -100%; width: 50%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent); animation: scan 3s ease-in-out infinite; }
+        @keyframes scan { 0%,100% { left: -100%; } 50% { left: 150%; } }
+
+        .holo-status { text-align: center; margin-top: 30px; padding: 8px 24px; background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.15); border-radius: 999px; backdrop-filter: blur(10px); }
+        .holo-name { font-size: 24px; font-weight: 800; background: linear-gradient(135deg, #fff, var(--primary-light)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: 1px; }
+        .holo-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+        /* 数据面板 */
+        .data-panels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 14px 0 10px; }
+        .data-card { background: var(--bg-card); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 12px 10px; text-align: center; backdrop-filter: blur(10px); position: relative; overflow: hidden; }
+        .data-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 2px; background: linear-gradient(90deg, transparent, var(--primary), transparent); opacity: 0.5; }
+        .data-value { font-size: 20px; font-weight: 700; color: var(--text-primary); }
+        .data-label { font-size: 10px; color: var(--text-muted); margin-top: 3px; letter-spacing: 0.5px; }
+        .data-card.active .data-value { animation: dataFlicker 1s ease-in-out infinite; color: var(--accent); }
+        @keyframes dataFlicker { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+
+        /* 可视化条 */
+        .visualizer { display: flex; align-items: flex-end; justify-content: center; gap: 4px; height: 40px; padding: 10px 0; }
+        .viz-bar { width: 5px; background: linear-gradient(to top, var(--primary), var(--accent)); border-radius: 999px; transition: height 0.08s ease; }
+        .visualizer.active .viz-bar { animation: vizDance 0.4s ease-in-out infinite alternate; }
+        .visualizer.active .viz-bar:nth-child(1) { animation-duration: 0.3s; }
+        .visualizer.active .viz-bar:nth-child(2) { animation-duration: 0.45s; }
+        .visualizer.active .viz-bar:nth-child(3) { animation-duration: 0.35s; }
+        .visualizer.active .viz-bar:nth-child(4) { animation-duration: 0.5s; }
+        .visualizer.active .viz-bar:nth-child(5) { animation-duration: 0.4s; }
+        .visualizer.active .viz-bar:nth-child(6) { animation-duration: 0.55s; }
+        .visualizer.active .viz-bar:nth-child(7) { animation-duration: 0.38s; }
+        @keyframes vizDance { from { height: 8px; opacity: 0.6; } to { height: 32px; opacity: 1; } }
+
+        /* 聊天区 */
+        .chat-section { position: relative; z-index: 20; flex: 1; display: flex; flex-direction: column; min-height: 0; background: linear-gradient(to top, rgba(5,5,16,0.98), transparent); border-top: 1px solid rgba(255,255,255,0.05); border-radius: 24px 24px 0 0; }
+        .chat-container { flex: 1; overflow-y: auto; padding: 14px 14px 8px; display: flex; flex-direction: column; gap: 10px; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; }
+        .chat-container::-webkit-scrollbar { width: 3px; }
+        .chat-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 999px; }
+        .chat-message { max-width: 88%; padding: 11px 15px; border-radius: 20px; font-size: 14px; line-height: 1.55; word-break: break-word; animation: messageIn 0.35s cubic-bezier(0.34,1.56,0.64,1); }
+        @keyframes messageIn { from { opacity: 0; transform: translateY(12px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .chat-message-user { align-self: flex-end; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; border-bottom-right-radius: 6px; box-shadow: 0 2px 12px rgba(99,102,241,0.25); }
+        .chat-message-assistant { align-self: flex-start; background: var(--bg-card); border: 1px solid rgba(255,255,255,0.06); border-bottom-left-radius: 6px; backdrop-filter: blur(8px); }
+        .chat-message-typing { align-self: flex-start; background: var(--bg-card); border: 1px solid rgba(255,255,255,0.06); border-radius: 20px; border-bottom-left-radius: 6px; padding: 12px 18px; display: flex; align-items: center; gap: 6px; }
+        .typing-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--primary); animation: typing 1.4s ease-in-out infinite; }
+        @keyframes typing { 0%,60%,100% { opacity: 0.35; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-3px); } }
+        .message-label { font-size: 10px; font-weight: 500; margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.3px; }
+        .chat-message-user .message-label { color: rgba(255,255,255,0.6); }
+        .chat-message-assistant .message-label { color: var(--text-muted); }
+
+        .quick-actions { display: flex; gap: 8px; padding: 10px 14px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+        .quick-actions::-webkit-scrollbar { display: none; }
+        .quick-btn { flex-shrink: 0; padding: 8px 14px; border-radius: 999px; background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.2); color: var(--text-secondary); font-size: 12px; font-weight: 500; cursor: pointer; transition: all var(--transition-fast); }
+        .quick-btn:active { transform: scale(0.94); background: rgba(99,102,241,0.2); color: var(--text-primary); }
+
+        .input-area { padding: 10px 14px 14px; padding-bottom: max(14px, env(safe-area-inset-bottom)); display: flex; gap: 10px; }
+        .input-wrapper { flex: 1; position: relative; }
+        .chat-input { width: 100%; padding: 12px 16px; padding-right: 40px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; color: var(--text-primary); font-size: 14px; outline: none; transition: all var(--transition-fast); backdrop-filter: blur(8px); }
+        .chat-input:focus { border-color: rgba(99,102,241,0.4); box-shadow: 0 0 0 2px rgba(99,102,241,0.1); background: rgba(255,255,255,0.07); }
+        .chat-input::placeholder { color: var(--text-muted); }
+        .input-actions { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); display: flex; gap: 6px; }
+        .input-btn { width: 26px; height: 26px; border-radius: 50%; background: transparent; border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+        .input-btn:active { transform: scale(0.85); }
+        .send-btn { width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); border: none; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 12px rgba(99,102,241,0.35); transition: all var(--transition-fast); flex-shrink: 0; font-size: 15px; }
+        .send-btn:active { transform: scale(0.92); }
+        .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .toast-container { position: fixed; top: 75px; left: 50%; transform: translateX(-50%); z-index: 1000; display: flex; flex-direction: column; gap: 8px; }
+        .toast { padding: 10px 20px; border-radius: 16px; background: rgba(255,255,255,0.95); color: var(--bg-0); font-size: 13px; font-weight: 500; box-shadow: 0 4px 20px rgba(0,0,0,0.4); animation: toastIn 0.25s cubic-bezier(0.34,1.56,0.64,1); min-width: 180px; text-align: center; }
+        @keyframes toastIn { to { opacity: 1; transform: translateY(0); } }
+        .toast-success { background: linear-gradient(135deg, rgba(16,185,129,0.95), rgba(5,150,105,0.95)); color: white; }
+        .toast-error { background: linear-gradient(135deg, rgba(239,68,68,0.95), rgba(220,38,38,0.95)); color: white; }
+        .toast-info { background: linear-gradient(135deg, rgba(59,130,246,0.95), rgba(37,99,235,0.95)); color: white; }
+
+        .music-player { position: fixed; bottom: 86px; left: 14px; right: 14px; background: var(--bg-card); border-radius: 16px; padding: 12px 14px; display: flex; align-items: center; gap: 12px; backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.06); transform: translateY(150%); opacity: 0; transition: all var(--transition-normal); z-index: 50; }
+        .music-player.show { transform: translateY(0); opacity: 1; }
+        .music-cover { width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(135deg, var(--primary), var(--secondary)); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+        .music-info { flex: 1; min-width: 0; }
+        .music-title { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .music-artist { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .music-controls { display: flex; align-items: center; gap: 10px; }
+        .music-btn { width: 30px; height: 30px; border-radius: 50%; background: transparent; border: none; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px; }
+        .music-btn:active { transform: scale(0.9); }
+        .music-btn.play { width: 38px; height: 38px; background: var(--primary); color: white; }
+        .music-progress { position: absolute; bottom: 0; left: 0; width: 100%; height: 2px; background: rgba(255,255,255,0.06); border-radius: 0 0 16px 16px; }
+        .music-progress-bar { height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); width: 0%; transition: width var(--transition-normal); }
+
+        .exit-confirm { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity var(--transition-normal); }
+        .exit-confirm.show { opacity: 1; pointer-events: auto; }
+        .exit-card { background: var(--bg-card); border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; padding: 28px; width: 80%; max-width: 320px; text-align: center; backdrop-filter: blur(20px); }
+        .exit-title { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+        .exit-text { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
+        .exit-actions { display: flex; gap: 12px; }
+        .exit-btn { flex: 1; padding: 12px; border-radius: 14px; border: none; font-size: 14px; font-weight: 600; cursor: pointer; transition: all var(--transition-fast); }
+        .exit-btn.cancel { background: rgba(255,255,255,0.08); color: var(--text-secondary); }
+        .exit-btn.cancel:active { background: rgba(255,255,255,0.15); }
+        .exit-btn.confirm { background: linear-gradient(135deg, var(--danger), #b91c1c); color: white; }
+        .exit-btn.confirm:active { transform: scale(0.95); }
+
+        @media (max-width: 380px) {
+            .holo-frame { width: 160px; height: 160px; }
+            .holo-avatar { width: 120px; height: 120px; }
+            .holo-name { font-size: 20px; }
+            .data-value { font-size: 18px; }
+            .chat-message { padding: 10px 13px; font-size: 13px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="background-layer">
+            <div class="bg-grid"></div>
+            <div class="bg-gradient"></div>
+            <div class="bg-scanline"></div>
+            <div class="particles" id="particles"></div>
+        </div>
+        <header class="header">
+            <div class="header-left">
+                <div class="ustb-badge">USTB</div>
+                <span class="brand-name">USTB AI Speaker</span>
+            </div>
+            <div class="header-right">
+                <button class="header-btn" id="wakeBtn" title="语音唤醒">🎤</button>
+                <div class="status-badge" id="connectionStatus"><span class="status-dot"></span><span id="statusText">连接中...</span></div>
+                <button class="header-btn exit" id="exitBtn" title="退出">✕</button>
+            </div>
+        </header>
+        <main class="main-content">
+            <div class="holo-section">
+                <div class="holo-frame">
+                    <div class="holo-ring"></div>
+                    <div class="holo-ring"></div>
+                    <div class="holo-ring"></div>
+                    <div class="holo-glow"></div>
+                    <div class="holo-avatar">
+                        <img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=futuristic%20beautiful%20female%20AI%20hologram%20assistant%20elegant%20Chinese%20woman%20glowing%20blue%20cyan%20purple%20neon%20lights%20sci-fi%20digital%20aura%20soft%20smile%20high%20tech%20portrait%20realistic%20render&image_size=square" alt="小智"/>
+                        <div class="holo-scan"></div>
+                    </div>
+                    <div class="holo-base"></div>
+                </div>
+                <div class="holo-status">
+                    <div class="holo-name">小智</div>
+                    <div class="holo-sub" id="holoSub">USTB 智能助手 · 在线</div>
+                </div>
+            </div>
+            <div class="data-panels">
+                <div class="data-card" id="cardVoice"><div class="data-value">●</div><div class="data-label">语音识别</div></div>
+                <div class="data-card" id="cardNlp"><div class="data-value">●</div><div class="data-label">大模型</div></div>
+                <div class="data-card" id="cardTts"><div class="data-value">●</div><div class="data-label">语音合成</div></div>
+            </div>
+            <div class="visualizer" id="visualizer">
+                <div class="viz-bar" style="height:8px"></div><div class="viz-bar" style="height:8px"></div><div class="viz-bar" style="height:8px"></div><div class="viz-bar" style="height:8px"></div><div class="viz-bar" style="height:8px"></div><div class="viz-bar" style="height:8px"></div><div class="viz-bar" style="height:8px"></div>
+            </div>
+            <div class="chat-section">
+                <div class="chat-container" id="chatContainer"></div>
+                <div class="quick-actions">
+                    <button class="quick-btn" onclick="sendQuickAction('播放音乐')">🎵 音乐</button>
+                    <button class="quick-btn" onclick="sendQuickAction('查询天气')">🌤️ 天气</button>
+                    <button class="quick-btn" onclick="sendQuickAction('讲个笑话')">😄 笑话</button>
+                    <button class="quick-btn" onclick="sendQuickAction('设置闹钟')">⏰ 闹钟</button>
+                    <button class="quick-btn" onclick="sendQuickAction('讲个故事')">📖 故事</button>
+                </div>
+                <div class="input-area">
+                    <div class="input-wrapper">
+                        <input type="text" class="chat-input" id="chatInput" placeholder="和小智说话..." autocomplete="off" />
+                        <div class="input-actions"><button class="input-btn" id="clearBtn" style="display:none">✕</button></div>
+                    </div>
+                    <button class="send-btn" id="sendBtn">➤</button>
+                </div>
+            </div>
+        </main>
+        <div class="music-player" id="musicPlayer">
+            <div class="music-cover">🎵</div>
+            <div class="music-info"><div class="music-title" id="musicTitle">未知歌曲</div><div class="music-artist" id="musicArtist">未知艺术家</div></div>
+            <div class="music-controls">
+                <button class="music-btn">⏮️</button>
+                <button class="music-btn play" id="musicPlayBtn">▶️</button>
+                <button class="music-btn">⏭️</button>
+            </div>
+            <div class="music-progress"><div class="music-progress-bar" id="musicProgress"></div></div>
+        </div>
+        <div class="toast-container" id="toastContainer"></div>
+        <div class="exit-confirm" id="exitConfirm">
+            <div class="exit-card">
+                <div class="exit-title">退出交互界面</div>
+                <div class="exit-text">确定要退出智能音箱交互界面吗？</div>
+                <div class="exit-actions">
+                    <button class="exit-btn cancel" id="exitCancel">取消</button>
+                    <button class="exit-btn confirm" id="exitConfirmBtn">退出</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        const WS_HOST = window.location.hostname || 'localhost';
+        const WS_PORT = 8765;
+        const WS_URL = `ws://${WS_HOST}:${WS_PORT}`;
+        let ws = null, reconnectDelay = 1000, reconnectAttempts = 0, reconnectTimer = null, heartbeatTimer = null, lastHeartbeatTime = 0;
+        let currentState = 'idle', isWaitingForResponse = false, responseTimeout = null;
+
+        const stateTexts = {
+            idle: ['你好，我是小智', 'USTB 智能助手 · 在线'],
+            listening: ['我在听，请说...', '正在接收语音信号'],
+            thinking: ['正在思考...', '大模型处理中'],
+            speaking: ['正在回答...', '语音合成播报中'],
+            music: ['享受音乐中...', '正在播放音乐'],
+            error: ['抱歉，出现了一点问题', '请稍后再试']
+        };
+
+        const els = {
+            statusBadge: document.getElementById('connectionStatus'), statusText: document.getElementById('statusText'),
+            holoSub: document.getElementById('holoSub'), visualizer: document.getElementById('visualizer'),
+            cardVoice: document.getElementById('cardVoice'), cardNlp: document.getElementById('cardNlp'), cardTts: document.getElementById('cardTts'),
+            chatContainer: document.getElementById('chatContainer'), chatInput: document.getElementById('chatInput'),
+            sendBtn: document.getElementById('sendBtn'), wakeBtn: document.getElementById('wakeBtn'), clearBtn: document.getElementById('clearBtn'),
+            musicPlayer: document.getElementById('musicPlayer'), musicTitle: document.getElementById('musicTitle'),
+            musicArtist: document.getElementById('musicArtist'), musicPlayBtn: document.getElementById('musicPlayBtn'),
+            musicProgress: document.getElementById('musicProgress'), toastContainer: document.getElementById('toastContainer'),
+            exitBtn: document.getElementById('exitBtn'), exitConfirm: document.getElementById('exitConfirm'),
+            exitCancel: document.getElementById('exitCancel'), exitConfirmBtn: document.getElementById('exitConfirmBtn'),
+            particles: document.getElementById('particles')
+        };
+
+        // 粒子背景
+        for (let i = 0; i < 25; i++) {
+            const p = document.createElement('div'); p.className = 'particle';
+            p.style.left = Math.random() * 100 + '%';
+            p.style.animationDuration = (5 + Math.random() * 8) + 's';
+            p.style.animationDelay = Math.random() * 5 + 's';
+            p.style.opacity = 0.3 + Math.random() * 0.5;
+            els.particles.appendChild(p);
+        }
+
+        function showToast(msg, type='info') {
+            const t = document.createElement('div'); t.className = `toast toast-${type}`; t.textContent = msg;
+            els.toastContainer.appendChild(t);
+            requestAnimationFrame(() => { t.style.opacity = '1'; t.style.transform = 'translateY(0)'; });
+            setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(-16px)'; setTimeout(() => t.remove(), 250); }, 2800);
+        }
+
+        function updateConnection(status) {
+            els.statusBadge.className = 'status-badge';
+            if (status === 'connected') { els.statusBadge.classList.add('connected'); els.statusText.textContent = '已连接'; }
+            else if (status === 'connecting') { els.statusBadge.classList.add('connecting'); els.statusText.textContent = '连接中...'; }
+            else if (status === 'disconnected') { els.statusBadge.classList.add('disconnected'); els.statusText.textContent = '已断开'; showToast('连接断开，正在重连...', 'error'); }
+            else { els.statusBadge.classList.add('disconnected'); els.statusText.textContent = '连接失败'; showToast('连接失败', 'error'); }
+        }
+
+        function updateState(state) {
+            if (currentState === state) return;
+            currentState = state;
+            const texts = stateTexts[state] || stateTexts.idle;
+            els.holoSub.textContent = texts[1];
+
+            // 数据面板高亮
+            els.cardVoice.classList.remove('active');
+            els.cardNlp.classList.remove('active');
+            els.cardTts.classList.remove('active');
+            els.visualizer.classList.remove('active');
+
+            if (state === 'listening') {
+                els.cardVoice.classList.add('active');
+                els.visualizer.classList.add('active');
+            } else if (state === 'thinking') {
+                els.cardNlp.classList.add('active');
+                isWaitingForResponse = true;
+                addTyping();
+                startResponseTimeout();
+            } else if (state === 'speaking') {
+                els.cardTts.classList.add('active');
+                els.visualizer.classList.add('active');
+                isWaitingForResponse = false;
+                removeTyping();
+                clearResponseTimeout();
+            } else if (state === 'music') {
+                isWaitingForResponse = false;
+                removeTyping();
+                clearResponseTimeout();
+            } else {
+                isWaitingForResponse = false;
+                removeTyping();
+                clearResponseTimeout();
+            }
+
+            els.chatInput.disabled = state !== 'idle';
+            els.sendBtn.disabled = state !== 'idle';
+            els.sendBtn.style.opacity = state !== 'idle' ? '0.5' : '1';
+        }
+
+        function startResponseTimeout() {
+            clearResponseTimeout();
+            responseTimeout = setTimeout(() => {
+                if (isWaitingForResponse && currentState === 'thinking') {
+                    showToast('响应较慢，请稍候...', 'info');
+                }
+            }, 5000);
+        }
+
+        function clearResponseTimeout() {
+            if (responseTimeout) { clearTimeout(responseTimeout); responseTimeout = null; }
+        }
+
+        function addChat(role, text) {
+            if (!text || !text.trim()) return;
+            removeTyping();
+            const d = document.createElement('div');
+            d.className = `chat-message chat-message-${role}`;
+            const label = role === 'user' ? '我' : '小智';
+            d.innerHTML = `<div class="message-label">${label}</div><div class="message-content">${escapeHtml(text)}</div>`;
+            els.chatContainer.appendChild(d);
+            scrollToBottom();
+            return d;
+        }
+
+        function appendAssistant(text) {
+            const msgs = els.chatContainer.querySelectorAll('.chat-message-assistant');
+            if (msgs.length === 0) return;
+            const c = msgs[msgs.length - 1].querySelector('.message-content');
+            if (c) { c.textContent += text; scrollToBottom(); }
+        }
+
+        function addTyping() {
+            removeTyping();
+            const d = document.createElement('div'); d.className = 'chat-message-typing'; d.id = 'typing';
+            d.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
+            els.chatContainer.appendChild(d); scrollToBottom();
+        }
+
+        function removeTyping() { const t = document.getElementById('typing'); if (t) t.remove(); }
+        function scrollToBottom() { requestAnimationFrame(() => { els.chatContainer.scrollTop = els.chatContainer.scrollHeight; }); }
+        function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+        function sendMsg(text) {
+            if (!text || !text.trim()) return;
+            if (!ws || ws.readyState !== WebSocket.OPEN) { showToast('未连接', 'error'); return; }
+            ws.send(JSON.stringify({ action: 'text_input', text: text }));
+            els.chatInput.value = ''; els.clearBtn.style.display = 'none';
+            addChat('user', text); updateState('thinking');
+        }
+
+        function sendQuickAction(action) { els.chatInput.value = action; sendMsg(action); }
+
+        function handleMsg(data) {
+            switch (data.type) {
+                case 'state_sync': case 'dialog_state_changed': if (data.state) updateState(data.state); break;
+                case 'wakeword_detected': updateState('listening'); break;
+                case 'audio_start': updateState('listening'); break;
+                case 'audio_stop': updateState('thinking'); break;
+                case 'audio_output': updateState('speaking'); break;
+                case 'audio_complete': updateState('idle'); break;
+                case 'audio_interrupt': updateState('idle'); showToast('已中断', 'info'); break;
+                case 'nlp_response':
+                    updateState('speaking');
+                    if (data.text) addChat('assistant', data.text);
+                    break;
+                case 'nlp_response_chunk': case 'nlp_sentence_chunk':
+                    if (data.text) {
+                        const existing = els.chatContainer.querySelectorAll('.chat-message-assistant');
+                        if (existing.length === 0 || isWaitingForResponse) {
+                            addChat('assistant', data.text);
+                            isWaitingForResponse = false;
+                            clearResponseTimeout();
+                        } else {
+                            appendAssistant(data.text + (data.type === 'nlp_sentence_chunk' ? ' ' : ''));
+                        }
+                    }
+                    break;
+                case 'transcript_updated': break;
+                case 'music_play': els.musicPlayer.classList.add('show'); els.musicTitle.textContent = data.song_name || '未知歌曲'; els.musicArtist.textContent = data.artist || '未知艺术家'; els.musicProgress.style.width = '0%'; els.musicPlayBtn.textContent = '⏸️'; updateState('music'); break;
+                case 'music_pause': els.musicPlayBtn.textContent = '▶️'; updateState('idle'); break;
+                case 'music_resume': els.musicPlayBtn.textContent = '⏸️'; updateState('music'); break;
+                case 'music_stop': els.musicPlayer.classList.remove('show'); updateState('idle'); break;
+                case 'skill_invoke': break;
+                case 'skill_result': if (data.speak_text) { addChat('assistant', data.speak_text); updateState('speaking'); setTimeout(() => updateState('idle'), 1000); } break;
+                case 'model_status': handleModelStatus(data); break;
+                case 'pong': lastHeartbeatTime = Date.now(); break;
+            }
+        }
+
+        function connect() {
+            if (ws && ws.readyState === WebSocket.OPEN) return;
+            ws = new WebSocket(WS_URL);
+            ws.onopen = () => { updateConnection('connected'); reconnectDelay = 1000; reconnectAttempts = 0; startHeartbeat(); };
+            ws.onmessage = e => { try { handleMsg(JSON.parse(e.data)); lastHeartbeatTime = Date.now(); } catch (err) {} };
+            ws.onclose = () => { updateConnection('disconnected'); stopHeartbeat(); scheduleReconnect(); };
+            ws.onerror = () => {};
+        }
+
+        function handleModelStatus(data) {
+            const status = data.status || '';
+            const msg = data.message || '';
+            if (status === 'llm_loaded') { showToast('✓ ' + msg, 'success'); }
+            else if (status === 'llm_loading') { els.holoSub.textContent = msg; }
+            else if (status === 'llm_missing' || status === 'llm_failed') { showToast('⚠ ' + msg, 'error'); els.holoSub.textContent = msg; }
+        }
+
+        function scheduleReconnect() {
+            if (reconnectAttempts >= 20) { updateConnection('failed'); return; }
+            reconnectTimer = setTimeout(() => { connect(); reconnectAttempts++; reconnectDelay = Math.min(reconnectDelay * 1.5, 60000); }, reconnectDelay + Math.random() * reconnectDelay * 0.5);
+        }
+
+        function startHeartbeat() {
+            stopHeartbeat();
+            heartbeatTimer = setInterval(() => {
+                if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'ping' }));
+                if (Date.now() - lastHeartbeatTime > 30000) ws.close(1000, 'Heartbeat timeout');
+            }, 10000);
+        }
+
+        function stopHeartbeat() { if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null; } }
+
+        // 退出功能
+        function showExitConfirm() { els.exitConfirm.classList.add('show'); }
+        function hideExitConfirm() { els.exitConfirm.classList.remove('show'); }
+        function doExit() {
+            if (ws) ws.close(1000, 'User exit');
+            stopHeartbeat();
+            if (reconnectTimer) clearTimeout(reconnectTimer);
+            clearResponseTimeout();
+            if (window.electronAPI && window.electronAPI.quitApp) {
+                window.electronAPI.quitApp();
+            } else {
+                window.close();
+                setTimeout(() => { showToast('请使用 Alt+F4 关闭窗口', 'info'); }, 300);
+            }
+        }
+
+        els.exitBtn.addEventListener('click', showExitConfirm);
+        els.exitCancel.addEventListener('click', hideExitConfirm);
+        els.exitConfirmBtn.addEventListener('click', doExit);
+        els.exitConfirm.addEventListener('click', e => { if (e.target === els.exitConfirm) hideExitConfirm(); });
+
+        els.sendBtn.addEventListener('click', () => sendMsg(els.chatInput.value));
+        els.chatInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(els.chatInput.value); } });
+        els.clearBtn.addEventListener('click', () => { els.chatInput.value = ''; els.clearBtn.style.display = 'none'; els.chatInput.focus(); });
+        els.chatInput.addEventListener('input', () => { els.clearBtn.style.display = els.chatInput.value ? 'flex' : 'none'; });
+        els.wakeBtn.addEventListener('click', () => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ action: 'wake_up' }));
+                els.wakeBtn.classList.add('active');
+                setTimeout(() => els.wakeBtn.classList.remove('active'), 2000);
+            }
+        });
+        els.musicPlayBtn.addEventListener('click', () => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                const action = els.musicPlayBtn.textContent === '▶️' ? 'play' : 'pause';
+                ws.send(JSON.stringify({ type: 'music_control', action }));
+            }
+        });
+
+        window.addEventListener('load', connect);
+        window.addEventListener('beforeunload', () => { if (ws) ws.close(1000, 'Page unload'); stopHeartbeat(); if (reconnectTimer) clearTimeout(reconnectTimer); clearResponseTimeout(); });
+    </script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+venv/
+env/
+ENV/
+
+# ===== 环境变量与密钥 =====
+.env
+.env.local
+.env.*.local
+
+# ===== IDE / 编辑器 =====
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ===== Office 临时文件 =====
+~$*
+*.tmp
+
+# ===== 前端依赖 =====
+node_modules/
+dist/
+build/
+
+# ===== 工具缓存 / 临时目录 =====
+.trae-html-share-packages/
+.uploads/
+03_Project_Cache/
+template_unpacked/
+tech-report-prep/
+图片/
+草稿/
+
+# ===== 课程交付文档 / PPT / 报告（隐私，不上传）=====
+01_Final_Document/
+02_Academic_Figures/
+02_Assets/
+03_Project_Cache/
+USTB_AI_Speaker_顶刊学术报告/
+docs/
+*.doc
+*.docx
+*.pdf
+*.ppt
+*.pptx
+*.xlsx
+*.xls
+project-reflections.html
+验收要求_提取.md
+report_output.txt
+嵌入式本地智能语音音箱 - 产品手册(1).pdf
+课程结课考核报告马远盟-生产实习.docx
+项目报告_step1.docx
+项目验收文件提交要求.docx
+马远盟_生产实习结课考核报告.docx
+验收汇报PPT_*.pptx
+USTB_AI_Speaker_最终完美排版*.docx
+USTB_AI_Speaker_最终完美排版*.pdf
+
+# ===== 运行数据（日志 / 音乐）=====
+speaker/data/
+*.log
+
+# ===== AI 模型大文件（超限或体积过大，需按 README 指引自行下载）=====
+speaker/models/**/*.onnx
+speaker/models/**/*.bin
+speaker/models/**/*.gguf

@@ -1,0 +1,2202 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>USTB AI Speaker - 小智</title>
+<style>
+:root {
+    --primary: #d4a574;
+    --secondary: #cd853f;
+    --accent: #ff8c00;
+    --accent-glow: rgba(255, 140, 0, 0.4);
+    --success: #daa520;
+    --warning: #ff6347;
+    --danger: #dc143c;
+    --purple: #8b5cf6;
+    --purple-glow: rgba(139, 92, 246, 0.5);
+    --blue-glow: rgba(99, 102, 241, 0.4);
+    --bg: #0d0805;
+    --bg-card: rgba(30, 18, 12, 0.6);
+    --bg-glass: rgba(40, 25, 18, 0.4);
+    --text: #f5ebe0;
+    --text2: rgba(255,235,210,0.75);
+    --text3: rgba(255,220,180,0.5);
+    --border: rgba(255, 140, 0, 0.3);
+    --border-glow: rgba(255, 140, 0, 0.2);
+    --particle-color: #cd853f;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+    width: 100%; height: 100%;
+    background: transparent;
+    color: var(--text);
+    font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    overflow: hidden;
+    font-size: 18px;
+}
+
+/* 极光背景层 */
+#aurora {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    overflow: hidden;
+    opacity: 0.4;
+}
+.aurora-blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.35;
+    mix-blend-mode: screen;
+}
+.aurora-blob.b1 {
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, #8b4513, transparent 70%);
+    top: -150px; left: -100px;
+}
+.aurora-blob.b2 {
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, #cd853f, transparent 70%);
+    bottom: -120px; right: -80px;
+}
+.aurora-blob.b3 {
+    width: 450px; height: 450px;
+    background: radial-gradient(circle, #ff8c00, transparent 70%);
+    top: 40%; left: 45%;
+    opacity: 0.15;
+}
+
+/* 林黛玉背景人物层 */
+#lin-daiyu-bg {
+    position: fixed; inset: 0; z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+/* 底层全屏模糊背景 */
+#lin-daiyu-bg .bg-layer {
+    position: absolute; inset: 0;
+    width: 100%;
+    height: 100%;
+    background: url('https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=ancient%20chinese%20beautiful%20woman%20Lin%20Daiyu%20style%2C%20elegant%20flowing%20hanfu%20dress%2C%20dreamy%20soft%20lighting%2C%20autumn%20maple%20leaves%2C%20poetic%20melancholy%20atmosphere%2C%20traditional%20chinese%20painting%20style%2C%20watercolor%20effect%2C%20warm%20autumn%20colors%2C%20golden%20hour%20light%2C%20serene%20and%20ethereal&image_size=portrait_4_3') center/cover no-repeat;
+    filter: blur(4px) brightness(0.9) contrast(1) saturate(1.1);
+}
+
+/* 中层人物清晰层 - 居中显示 */
+#lin-daiyu-bg .character-layer {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 65%;
+    height: 100%;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    opacity: 0.85;
+}
+#lin-daiyu-bg .character-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: bottom center;
+    filter: brightness(1) contrast(1) saturate(1.15);
+}
+
+/* 光束效果 */
+#lin-daiyu-bg .light-rays {
+    position: absolute; inset: 0;
+    background:
+        linear-gradient(135deg, rgba(255,200,100,0.04) 0%, transparent 45%),
+        linear-gradient(160deg, rgba(255,180,80,0.03) 0%, transparent 50%);
+    pointer-events: none;
+}
+
+#particles { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
+
+#app {
+    position: relative; z-index: 2;
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    background: transparent !important;
+}
+
+/* 顶部栏 */
+#header {
+    flex-shrink: 0;
+    height: 64px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 24px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(13,8,5,0.6);
+    backdrop-filter: blur(12px);
+}
+#header .brand { display: flex; align-items: center; gap: 14px; }
+#header .brand-icon {
+    width: 40px; height: 40px; border-radius: 10px;
+    background: linear-gradient(135deg, #004098, #0055bb);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 800; color: #fff;
+    box-shadow: 0 0 20px rgba(0,85,187,0.4);
+}
+#header .brand-title {
+    font-size: 28px; font-weight: 700;
+    letter-spacing: 2px;
+    background: linear-gradient(135deg, #fff, var(--accent));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+#header .conn {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 14px; border-radius: 6px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.08);
+    font-size: 15px;
+}
+#header .conn-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--success); animation: pulse 2s infinite;
+}
+#header .conn.disconnected .conn-dot { background: var(--danger); }
+#header .conn.connecting .conn-dot { background: var(--warning); }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
+#header .sys-info {
+    font-size: 14px;
+    color: var(--text2);
+    font-family: monospace;
+}
+
+/* 主内容 */
+#main {
+    flex: 1; display: flex; min-height: 0;
+    padding: 20px; gap: 20px;
+    background: transparent !important;
+    position: relative;
+}
+
+/* 玻璃面板 */
+.panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    backdrop-filter: blur(12px);
+    padding: 22px;
+    overflow: hidden;
+    position: relative;
+    box-shadow:
+        0 4px 16px rgba(0,0,0,0.2),
+        inset 0 1px 0 rgba(255,255,255,0.08),
+        0 0 20px var(--border-glow);
+}
+.panel::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent-glow), transparent);
+}
+.panel-title {
+    font-size: 16px; font-weight: 600;
+    color: var(--accent); letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px;
+}
+
+/* 左侧遥测 */
+#left-panel {
+    width: 380px; flex-shrink: 0;
+    display: flex; flex-direction: column; gap: 14px;
+    overflow-y: auto; overflow-x: hidden;
+}
+
+/* --- 网易云风格音乐播放器 --- */
+.music-player-card {
+    background: linear-gradient(135deg, rgba(205,133,63,0.15), rgba(139,69,19,0.08));
+    border: 1px solid rgba(205,133,63,0.25);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    position: relative;
+    overflow: hidden;
+}
+.music-player-card::after {
+    content: '';
+    position: absolute; top: -50%; right: -30%;
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, rgba(205,133,63,0.15), transparent 70%);
+    pointer-events: none;
+}
+.music-player-card.hidden { display: none; }
+.music-card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+    position: relative; z-index: 1;
+}
+.music-card-title {
+    font-size: 14px; font-weight: 600;
+    color: var(--text);
+    display: flex; align-items: center; gap: 6px;
+}
+.music-card-title .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--success);
+    animation: pulse 1.5s infinite;
+    box-shadow: 0 0 8px var(--success);
+}
+.music-card-title .dot.paused { background: var(--warning); box-shadow: 0 0 8px var(--warning); }
+.music-card-title .dot.stopped { background: var(--text3); animation: none; box-shadow: none; }
+.music-card-collapse {
+    background: transparent; border: none; color: var(--text3);
+    font-size: 14px; cursor: pointer; padding: 2px 6px;
+    border-radius: 4px;
+}
+.music-card-collapse:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+.music-card.collapsed .music-card-body { display: none; }
+
+.music-now-playing {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 12px;
+    position: relative; z-index: 1;
+}
+.music-cover {
+    width: 56px; height: 56px; border-radius: 8px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; flex-shrink: 0;
+    position: relative; overflow: hidden;
+    box-shadow: 0 4px 12px rgba(99,102,241,0.3);
+}
+.music-cover.playing { animation: coverSpin 8s linear infinite; }
+.music-cover.paused { animation: coverSpin 8s linear infinite; animation-play-state: paused; }
+@keyframes coverSpin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+.music-cover::before {
+    content: '';
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 12px; height: 12px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 50%;
+}
+.music-cover .glyph { position: relative; z-index: 1; }
+
+.music-track-info { flex: 1; min-width: 0; }
+.music-track-name {
+    font-size: 16px; font-weight: 600;
+    color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    margin-bottom: 3px;
+}
+.music-track-artist {
+    font-size: 13px; color: var(--text3);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.music-track-artist.empty { color: var(--text3); font-style: italic; }
+
+.music-progress {
+    margin-bottom: 12px;
+    position: relative; z-index: 1;
+}
+.music-progress-time {
+    display: flex; justify-content: space-between;
+    font-size: 11px; color: var(--text3);
+    font-family: 'Courier New', monospace;
+    margin-bottom: 4px;
+}
+.music-progress-bar {
+    height: 4px; background: rgba(255,255,255,0.08);
+    border-radius: 2px; overflow: hidden;
+    cursor: pointer; position: relative;
+}
+.music-progress-bar:hover { height: 6px; }
+.music-progress-fill {
+    height: 100%; background: linear-gradient(90deg, #6366f1, #8b5cf6);
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.3s;
+    position: relative;
+    box-shadow: 0 0 8px rgba(99,102,241,0.5);
+}
+.music-progress-fill::after {
+    content: '';
+    position: absolute; right: -4px; top: 50%;
+    transform: translateY(-50%);
+    width: 10px; height: 10px;
+    background: var(--accent);
+    border-radius: 50%;
+    opacity: 0; transition: opacity 0.2s;
+    box-shadow: 0 0 6px var(--accent);
+}
+.music-progress-bar:hover .music-progress-fill::after { opacity: 1; }
+
+.music-controls-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+    position: relative; z-index: 1;
+}
+.music-ctrl-group { display: flex; align-items: center; gap: 6px; }
+.music-ctrl-btn {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: var(--text);
+    font-size: 14px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+}
+.music-ctrl-btn:hover {
+    background: rgba(99,102,241,0.2);
+    border-color: rgba(99,102,241,0.4);
+    color: var(--text);
+    transform: scale(1.05);
+}
+.music-ctrl-btn:active { transform: scale(0.95); }
+.music-ctrl-btn.play {
+    width: 44px; height: 44px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    border: none;
+    color: #fff;
+    font-size: 16px;
+    box-shadow: 0 4px 12px rgba(99,102,241,0.4);
+}
+.music-ctrl-btn.play:hover {
+    background: linear-gradient(135deg, #7376f5, #9d6ef9);
+    box-shadow: 0 6px 18px rgba(99,102,241,0.5);
+}
+.music-ctrl-btn.active { color: var(--accent); }
+.music-ctrl-btn.loop { font-size: 12px; }
+.music-ctrl-btn.shuffle { font-size: 12px; }
+
+.music-volume {
+    display: flex; align-items: center; gap: 8px;
+    flex: 1; margin: 0 12px; max-width: 160px;
+    position: relative; z-index: 10;
+}
+.music-volume-icon { font-size: 14px; color: var(--text3); }
+.music-volume-bar {
+    flex: 1; height: 20px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 10px; cursor: pointer; position: relative;
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
+}
+.music-volume-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), #8b5cf6);
+    border-radius: 8px;
+    width: 50%;
+    position: relative;
+    transition: width 0.15s ease;
+    box-shadow: 0 0 8px var(--accent);
+}
+.music-volume-fill::after {
+    content: '';
+    position: absolute; right: -6px; top: 50%;
+    transform: translateY(-50%);
+    width: 14px; height: 14px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.music-playlist-section {
+    border-top: 1px solid rgba(255,255,255,0.06);
+    padding-top: 10px;
+    max-height: 200px;
+    overflow-y: auto;
+    position: relative; z-index: 1;
+}
+.music-playlist-section::-webkit-scrollbar { width: 3px; }
+.music-playlist-section::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.2); border-radius: 3px; }
+.music-playlist-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 12px; color: var(--text3);
+}
+.music-playlist-header .count {
+    background: rgba(99,102,241,0.15);
+    padding: 2px 8px; border-radius: 10px;
+    color: var(--accent);
+    font-weight: 600;
+}
+.music-playlist-empty {
+    text-align: center; padding: 20px 10px;
+    color: var(--text3); font-size: 13px;
+}
+.music-playlist-empty .icon { font-size: 24px; margin-bottom: 4px; opacity: 0.5; }
+.music-playlist-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.music-playlist-item:hover { background: rgba(99,102,241,0.1); }
+.music-playlist-item.active {
+    background: rgba(99,102,241,0.15);
+    color: var(--accent);
+}
+.music-playlist-item .idx {
+    width: 22px; text-align: center;
+    font-family: 'Courier New', monospace;
+    font-size: 12px; color: var(--text3);
+    flex-shrink: 0;
+}
+.music-playlist-item.active .idx { color: var(--accent); font-weight: 600; }
+.music-playlist-item .info { flex: 1; min-width: 0; }
+.music-playlist-item .title {
+    font-size: 13px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.music-playlist-item .artist {
+    font-size: 11px; color: var(--text3);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.music-playlist-item .playing-mark {
+    color: var(--accent); font-size: 12px;
+    animation: pulse 1s infinite;
+}
+#left-panel::-webkit-scrollbar { width: 4px; }
+#left-panel::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.2); border-radius: 4px; }
+
+.time-box { text-align: center; padding: 20px 10px; }
+.time-box .clock { font-size: 52px; font-weight: 700; letter-spacing: 3px; font-family: 'Courier New', monospace; text-shadow: 0 0 20px rgba(99,102,241,0.3); }
+.time-box .date { font-size: 18px; color: var(--text2); margin-top: 6px; }
+
+.gauge-box { display: flex; align-items: center; gap: 16px; margin-top: 8px; }
+.gauge-svg { transform: rotate(-90deg); }
+.gauge-bg { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 8; }
+.gauge-fill { fill: none; stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset 0.6s ease; filter: drop-shadow(0 0 4px currentColor); }
+.gauge-val { font-size: 40px; font-weight: 700; font-family: 'Courier New', monospace; }
+.gauge-unit { font-size: 16px; color: var(--text3); margin-left: 3px; }
+.gauge-label { font-size: 16px; color: var(--text2); margin-top: 4px; }
+
+.bar-track { width: 100%; height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden; margin-top: 8px; }
+.bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; box-shadow: 0 0 8px currentColor; }
+
+/* 中央 */
+#center-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: transparent !important;
+    position: relative;
+}
+
+/* 小智状态卡片 - 系统卡片样式 + 强烈紫色发光 */
+.status-card {
+    position: absolute;
+    bottom: 50px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(30, 18, 12, 0.75);
+    border: 2px solid rgba(139, 92, 246, 0.5);
+    border-radius: 24px;
+    backdrop-filter: blur(20px);
+    padding: 28px 48px;
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    box-shadow:
+        0 0 60px rgba(139, 92, 246, 0.5),
+        0 0 100px rgba(139, 92, 246, 0.3),
+        0 0 160px rgba(99, 102, 241, 0.2),
+        0 12px 40px rgba(0,0,0,0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    z-index: 10;
+}
+
+.status-card .sprite-wrap {
+    width: 80px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.status-card .sprite-svg {
+    width: 70px;
+    height: 70px;
+    transition: transform 0.3s ease;
+}
+.status-card .state-idle .sprite-svg { animation: idleFloat 3s ease-in-out infinite; }
+.status-card .state-listening .sprite-svg { animation: listenBounce 1.2s ease-in-out infinite; }
+.status-card .state-thinking .sprite-svg { animation: thinkWobble 2s ease-in-out infinite; }
+.status-card .state-speaking .sprite-svg { animation: speakBob 0.4s ease-in-out infinite; }
+.status-card .state-playing_music .sprite-svg { animation: musicSway 2s ease-in-out infinite; }
+@keyframes idleFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+@keyframes listenBounce { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+@keyframes thinkWobble { 0%,100%{transform:rotate(-3deg)} 50%{transform:rotate(3deg)} }
+@keyframes speakBob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
+@keyframes musicSway { 0%,100%{transform:translateX(-3px) rotate(-2deg)} 50%{transform:translateX(3px) rotate(2deg)} }
+
+.status-card .status-content {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.status-card .name {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    background: linear-gradient(135deg, #fff, #a855f7);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.status-card .state {
+    font-size: 20px;
+    color: #a855f7;
+    font-weight: 500;
+    margin-top: 4px;
+}
+
+.status-card .sub {
+    font-size: 16px;
+    color: var(--text3);
+    margin-top: 2px;
+}
+
+/* 右侧 */
+#right-panel {
+    width: 420px; flex-shrink: 0;
+    display: flex; flex-direction: column; gap: 14px;
+    overflow: hidden;
+}
+
+#chat-log {
+    flex: 1; overflow-y: auto; min-height: 0;
+    font-size: 17px; line-height: 1.7;
+}
+#chat-log::-webkit-scrollbar { width: 4px; }
+#chat-log::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.2); border-radius: 4px; }
+
+.chat-msg { margin-bottom: 14px; animation: msgIn 0.3s ease; }
+@keyframes msgIn { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: translateX(0); } }
+.chat-msg .time { font-size: 13px; color: var(--text3); margin-bottom: 4px; }
+.chat-msg .sender { font-weight: 600; margin-right: 6px; }
+.chat-msg.user .sender { color: var(--success); }
+.chat-msg.assistant .sender { color: var(--accent); }
+.chat-msg.system { opacity: 0.7; font-size: 15px; }
+.chat-msg.system .sender { color: var(--warning); }
+
+/* 快捷按钮 */
+.quick-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.quick-btn {
+    padding: 10px 16px; border-radius: 8px;
+    background: rgba(99,102,241,0.1);
+    border: 1px solid rgba(99,102,241,0.2);
+    color: var(--text2); font-size: 16px;
+    cursor: pointer; transition: all 0.15s;
+    display: flex; align-items: center; gap: 5px;
+}
+.quick-btn:hover { background: rgba(99,102,241,0.2); border-color: rgba(99,102,241,0.4); color: var(--text); transform: translateY(-1px); }
+
+/* 输入框 */
+.input-row { display: flex; gap: 10px; }
+#chat-input {
+    flex: 1; padding: 12px 16px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px; color: var(--text); font-size: 17px;
+    outline: none; transition: all 0.2s;
+}
+#chat-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
+#send-btn {
+    width: 48px; height: 48px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    border: none; color: #fff; font-size: 18px;
+    cursor: pointer; transition: all 0.15s;
+}
+#send-btn:hover { transform: scale(1.05); box-shadow: 0 4px 15px rgba(99,102,241,0.3); }
+
+/* 控制按钮 */
+.ctrl-row { display: flex; gap: 10px; }
+.ctrl-btn {
+    flex: 1; padding: 12px;
+    border-radius: 10px; border: none;
+    font-size: 16px; font-weight: 500;
+    cursor: pointer; transition: all 0.15s;
+    color: #fff;
+}
+.ctrl-btn:hover { transform: translateY(-2px); }
+.ctrl-btn:active { transform: scale(0.97); }
+.ctrl-wake { background: linear-gradient(135deg, var(--primary), var(--secondary)); }
+.ctrl-stop { background: rgba(239,68,68,0.8); }
+.ctrl-music { background: linear-gradient(135deg, var(--success), #059669); }
+
+/* 退出 */
+#exit-bar {
+    position: fixed; top: 12px; right: 12px; z-index: 1000;
+}
+#exit-btn {
+    background: var(--danger); color: #fff; border: none;
+    padding: 8px 18px; border-radius: 6px;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    box-shadow: 0 2px 10px rgba(239,68,68,0.3);
+}
+#exit-btn:hover { background: #dc2626; }
+
+/* 退出确认 */
+#exit-dlg {
+    position: fixed; inset: 0; z-index: 2000;
+    background: rgba(0,0,0,0.6);
+    display: none; align-items: center; justify-content: center;
+    backdrop-filter: blur(4px);
+}
+#exit-dlg.show { display: flex; }
+#exit-dlg .dlg-box {
+    background: #1e293b; padding: 28px 32px; border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5); max-width: 360px;
+    border: 1px solid rgba(99,102,241,0.2);
+}
+#exit-dlg h3 { margin: 0 0 12px; font-size: 18px; }
+#exit-dlg p { margin: 0 0 20px; color: #94a3b8; font-size: 14px; }
+#exit-dlg .actions { display: flex; gap: 12px; justify-content: flex-end; }
+#exit-dlg button { padding: 8px 18px; border-radius: 6px; border: none; cursor: pointer; font-size: 13px; }
+#exit-dlg .btn-cancel { background: #475569; color: #fff; }
+#exit-dlg .btn-confirm { background: var(--danger); color: #fff; }
+
+/* 重连提示 */
+#reconnect-toast {
+    position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
+    background: rgba(245,158,11,0.9); color: #fff;
+    padding: 10px 24px; border-radius: 8px; font-size: 14px;
+    opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 100;
+    backdrop-filter: blur(8px);
+}
+#reconnect-toast.show { opacity: 1; }
+
+/* Toast通知 */
+#toast-container {
+    position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
+    z-index: 1000; display: flex; flex-direction: column; gap: 8px;
+    pointer-events: none;
+}
+.toast {
+    padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 500;
+    color: #fff; box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    opacity: 0; transform: translateY(-10px); transition: all 0.3s ease;
+    backdrop-filter: blur(8px); pointer-events: auto;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast-success { background: rgba(16,185,129,0.9); }
+.toast-error { background: rgba(239,68,68,0.9); }
+.toast-info { background: rgba(99,102,241,0.9); }
+.toast-warning { background: rgba(245,158,11,0.9); }
+</style>
+</head>
+<body>
+<div id="aurora">
+    <div class="aurora-blob b1"></div>
+    <div class="aurora-blob b2"></div>
+    <div class="aurora-blob b3"></div>
+</div>
+
+<!-- 林黛玉背景人物 -->
+<div id="lin-daiyu-bg">
+    <div class="bg-layer"></div>
+    <div class="character-layer">
+        <img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=ancient%20chinese%20beautiful%20woman%20Lin%20Daiyu%20style%2C%20elegant%20flowing%20hanfu%20dress%2C%20dreamy%20soft%20lighting%2C%20autumn%20maple%20leaves%2C%20poetic%20melancholy%20atmosphere%2C%20traditional%20chinese%20painting%20style%2C%20watercolor%20effect%2C%20warm%20autumn%20colors%2C%20golden%20hour%20light%2C%20serene%20and%20ethereal&image_size=portrait_4_3" alt="Lin Daiyu" class="character-img">
+    </div>
+    <div class="character-feather"></div>
+    <div class="vignette-overlay"></div>
+    <div class="light-rays"></div>
+    <div class="transition-gradient"></div>
+</div>
+
+<canvas id="particles"></canvas>
+
+<div id="app">
+    <header id="header">
+        <div class="brand">
+            <div class="brand-icon">USTB</div>
+            <div class="brand-title">USTB AI SPEAKER</div>
+        </div>
+        <div class="conn" id="connStatus">
+            <div class="conn-dot"></div>
+            <span id="connText">连接中...</span>
+        </div>
+        <div class="sys-info">IP: 127.0.0.1; 1970年01月01日 星期四</div>
+    </header>
+
+    <div id="main">
+        <!-- 左侧遥测 -->
+        <aside id="left-panel">
+            <!-- 网易云风格音乐播放器 -->
+            <div class="music-player-card hidden" id="musicPlayerCard">
+                <div class="music-card-header">
+                    <div class="music-card-title">
+                        <div class="dot stopped" id="musicStatusDot"></div>
+                        <span id="musicStatusText">音乐播放</span>
+                    </div>
+                    <button class="music-card-collapse" id="musicCollapseBtn">−</button>
+                </div>
+                <div class="music-card-body" id="musicCardBody">
+                    <div class="music-now-playing">
+                        <div class="music-cover" id="musicCover">
+                            <span class="glyph">🎵</span>
+                        </div>
+                        <div class="music-track-info">
+                            <div class="music-track-name" id="musicTitle">未播放</div>
+                            <div class="music-track-artist empty" id="musicArtist">点击下方按钮开始</div>
+                        </div>
+                    </div>
+                    <div class="music-progress">
+                        <div class="music-progress-time">
+                            <span id="musicCurTime">00:00</span>
+                            <span id="musicDurTime">00:00</span>
+                        </div>
+                        <div class="music-progress-bar" id="musicProgressBar">
+                            <div class="music-progress-fill" id="musicProgressFill"></div>
+                        </div>
+                    </div>
+                    <div class="music-controls-row">
+                        <div class="music-ctrl-group">
+                            <button class="music-ctrl-btn loop" id="musicLoopBtn" title="循环模式">⟳</button>
+                        </div>
+                        <div class="music-ctrl-group">
+                            <button class="music-ctrl-btn" id="musicPrevBtn" title="上一首">⏮</button>
+                            <button class="music-ctrl-btn play" id="musicPlayBtn" title="播放/暂停">▶</button>
+                            <button class="music-ctrl-btn" id="musicNextBtn" title="下一首">⏭</button>
+                        </div>
+                    </div>
+                    <div class="music-volume" id="musicVolume">
+                        <span class="music-volume-icon" id="volIcon">🔊</span>
+                        <div class="music-volume-bar" id="musicVolumeBar">
+                            <div class="music-volume-fill" id="musicVolumeFill" style="width:50%"></div>
+                        </div>
+                    </div>
+                    <div class="music-playlist-section">
+                        <div class="music-playlist-header">
+                            <span>播放列表</span>
+                            <span class="count" id="musicCount">0</span>
+                        </div>
+                        <div id="musicPlaylist">
+                            <div class="music-playlist-empty">
+                                <div class="icon">📂</div>
+                                <div>暂无音乐</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel time-box">
+                <div class="panel-title">时间/日期</div>
+                <div class="clock" id="clock">11:13:11</div>
+                <div class="date" id="date">2026.07.17, Friday</div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">CPU 负载</div>
+                <div class="gauge-box">
+                    <svg width="90" height="90" class="gauge-svg">
+                        <circle class="gauge-bg" cx="45" cy="45" r="38"/>
+                        <circle class="gauge-fill" id="cpu-fill" cx="45" cy="45" r="38"
+                                stroke="var(--accent)" stroke-dasharray="238.8" stroke-dashoffset="238.8" style="stroke-dashoffset: 179.1"/>
+                    </svg>
+                    <div>
+                        <div><span class="gauge-val" id="cpu-val">25</span><span class="gauge-unit">%</span></div>
+                        <div class="gauge-label">处理器</div>
+                    </div>
+                </div>
+                <div class="bar-track"><div class="bar-fill" id="cpu-bar" style="width:25%;background:var(--accent)"></div></div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">内存</div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                    <span style="font-size:14px;color:var(--text2)">RAM</span>
+                    <span style="font-size:18px;font-weight:600;color:var(--success)" id="mem-val">45%</span>
+                </div>
+                <div class="bar-track"><div class="bar-fill" id="mem-bar" style="width:45%;background:var(--success)"></div></div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">温度</div>
+                <div class="gauge-box">
+                    <svg width="90" height="90" class="gauge-svg">
+                        <circle class="gauge-bg" cx="45" cy="45" r="38"/>
+                        <circle class="gauge-fill" id="temp-fill" cx="45" cy="45" r="38"
+                                stroke="var(--warning)" stroke-dasharray="238.8" stroke-dashoffset="238.8" style="stroke-dashoffset: 143.28"/>
+                    </svg>
+                    <div>
+                        <div><span class="gauge-val" id="temp-val">40</span><span class="gauge-unit">°C</span></div>
+                        <div class="gauge-label">设备温度</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">网络</div>
+                <div style="display:flex;align-items:center;gap:12px;margin-top:6px">
+                    <div style="display:flex;align-items:flex-end;gap:3px;height:24px">
+                        <div style="width:5px;height:6px;background:var(--primary);border-radius:2px"></div>
+                        <div style="width:5px;height:12px;background:var(--primary);border-radius:2px"></div>
+                        <div style="width:5px;height:18px;background:var(--primary);border-radius:2px"></div>
+                        <div style="width:5px;height:24px;background:var(--primary);border-radius:2px;box-shadow:0 0 6px var(--primary)"></div>
+                    </div>
+                    <div>
+                        <div style="font-size:14px">USTB-WiFi</div>
+                        <div style="font-size:12px;color:var(--text3)">信号: <span id="wifi-val">-50</span> dBm</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 中央 -->
+        <section id="center-panel">
+            <div class="status-card">
+                <div class="sprite-wrap state-idle" id="spriteWrap">
+                    <svg class="sprite-svg" viewBox="0 0 200 200" id="spriteSvg">
+                        <defs>
+                            <linearGradient id="bodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#6366f1"/>
+                                <stop offset="50%" stop-color="#8b5cf6"/>
+                                <stop offset="100%" stop-color="#a855f7"/>
+                            </linearGradient>
+                        </defs>
+                        <ellipse cx="100" cy="110" rx="65" ry="70" fill="url(#bodyGrad)"/>
+                        <circle cx="100" cy="90" r="40" fill="#fff"/>
+                        <circle cx="82" cy="85" r="6" fill="#1a1a2e" id="eyeL"/>
+                        <circle cx="118" cy="85" r="6" fill="#1a1a2e" id="eyeR"/>
+                        <path d="M70 130 Q100 145 130 130" fill="#1a1a2e" id="mouth"/>
+                        <circle cx="65" cy="100" r="9" fill="rgba(255,182,193,0.6)" id="cheekL"/>
+                        <circle cx="135" cy="100" r="9" fill="rgba(255,182,193,0.6)" id="cheekR"/>
+                        <path d="M75 55 Q65 35 75 15" stroke="url(#bodyGrad)" stroke-width="5" fill="none" stroke-linecap="round"/>
+                        <path d="M125 55 Q135 35 125 15" stroke="url(#bodyGrad)" stroke-width="5" fill="none" stroke-linecap="round"/>
+                        <circle cx="75" cy="12" r="7" fill="var(--primary)"/>
+                        <circle cx="125" cy="12" r="7" fill="var(--primary)"/>
+                    </svg>
+                </div>
+                <div class="status-content">
+                    <div class="name">小智</div>
+                    <div class="state" id="stateText">语音识别中...</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 右侧 -->
+        <aside id="right-panel">
+            <div class="panel" style="flex:1;display:flex;flex-direction:column;min-height:0">
+                <div class="panel-title">对话记录</div>
+                <div id="chat-log">
+                    <div class="chat-msg system"><span class="time">[SYSTEM]</span><br><span class="sender">$</span>系统状态：等待连接...</div>
+                    <div class="chat-msg system"><span class="time">[SYSTEM]</span><br><span class="sender">$</span>已连接到语音核心</div>
+                    <div class="chat-msg system"><span class="time">[SYSTEM]</span><br><span class="sender">$</span>欢迎：Connected to Smart Speaker</div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">快捷指令</div>
+                <div class="quick-btns" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+                    <button class="quick-btn" data-cmd="播放音乐" style="font-size:14px;padding:6px 10px">🎵</button>
+                    <button class="quick-btn" data-cmd="讲个笑话" style="font-size:14px;padding:6px 10px">😄</button>
+                    <button class="quick-btn" data-cmd="查询天气" style="font-size:14px;padding:6px 10px">🌤</button>
+                    <button class="quick-btn" data-cmd="讲个故事" style="font-size:14px;padding:6px 10px">📖</button>
+                    <button class="quick-btn" data-cmd="打开水果忍者" style="font-size:14px;padding:6px 10px">🎮</button>
+                </div>
+                <div style="display:flex;gap:8px">
+                    <button class="ctrl-btn ctrl-wake" id="wakeBtn" style="flex:1">🔔 唤醒</button>
+                    <button class="ctrl-btn ctrl-stop" id="stopBtn" style="flex:1">⏹ 话语</button>
+                    <button class="ctrl-btn ctrl-music" id="musicBtn" style="flex:1">🎵 音乐</button>
+                </div>
+            </div>
+
+            <div class="panel" style="padding:14px">
+                <div class="input-row">
+                    <input type="text" id="chat-input" placeholder="输入文字与音箱对话...">
+                    <button id="send-btn">➤</button>
+                </div>
+            </div>
+        </aside>
+    </div>
+</div>
+
+<div id="exit-bar"><button id="exit-btn">退出</button></div>
+
+<div id="exit-dlg">
+    <div class="dlg-box">
+        <h3>确认退出</h3>
+        <p>确定要退出智能音箱程序吗？</p>
+        <div class="actions">
+            <button class="btn-cancel" id="cancel-exit">取消</button>
+            <button class="btn-confirm" id="confirm-exit">确认退出</button>
+        </div>
+    </div>
+</div>
+
+<div id="reconnect-toast">正在重连...</div>
+<div id="toast-container"></div>
+
+<script>
+// ===================== 网易云风格音乐播放器 =====================
+const MusicPlayer = {
+    playlist: [],
+    currentIndex: -1,
+    isPlaying: false,
+    isPaused: false,
+    volume: 50,
+    loopMode: 0, // 0=列表循环, 1=单曲循环, 2=随机
+    position: 0,   // 当前播放位置（秒）
+    duration: 0,   // 歌曲总时长（秒）
+    progressTimer: null,  // 本地进度定时器
+    _syncingVolume: false, // 防止音量回环：收到后端音量时标记，避免再发回后端
+    _lastActionTime: 0,
+    _actionCooldown: 1500, // 音乐操作冷却(ms)
+
+    _canAction() {
+        const now = Date.now();
+        if (now - this._lastActionTime < this._actionCooldown) {
+            console.log('[Music] 操作冷却中，忽略点击');
+            showToast('操作太快了，请稍等一下', 'warning', 1500);
+            return false;
+        }
+        this._lastActionTime = now;
+        return true;
+    },
+
+    init() {
+        document.getElementById('musicPlayBtn').addEventListener('click', () => this.toggle());
+        document.getElementById('musicPrevBtn').addEventListener('click', () => this.prev());
+        document.getElementById('musicNextBtn').addEventListener('click', () => this.next());
+        document.getElementById('musicLoopBtn').addEventListener('click', () => this.toggleLoop());
+        document.getElementById('musicCollapseBtn').addEventListener('click', () => this.toggleCollapse());
+        document.getElementById('musicProgressBar').addEventListener('click', (e) => this.seek(e));
+        // 音量条：支持点击+拖拽
+        const volBar = document.getElementById('musicVolumeBar');
+        if (volBar) {
+            console.log('[Music] 音量条元素找到，绑定事件');
+            volBar.addEventListener('click', (e) => {
+                console.log('[Music] 音量条点击事件触发');
+                this.setVolumeFromBar(e);
+            });
+            this._setupVolumeDrag(volBar);
+        } else {
+            console.error('[Music] 音量条元素未找到！');
+        }
+        this.loadInitialState();
+    },
+
+    _setupVolumeDrag(bar) {
+        let isDragging = false;
+        const onMove = (ev) => {
+            if (!isDragging) return;
+            const rect = bar.getBoundingClientRect();
+            const clientX = ev.touches ? ev.touches[0].clientX : ev.clientX;
+            const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+            this.setVolume(Math.round(pct * 100));
+        };
+        const onUp = () => {
+            isDragging = false;
+            window.removeEventListener('mousemove', onMove);
+            window.removeEventListener('mouseup', onUp);
+            window.removeEventListener('touchmove', onMove);
+            window.removeEventListener('touchend', onUp);
+        };
+        bar.addEventListener('mousedown', (e) => { isDragging = true; onMove(e); window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp); });
+        bar.addEventListener('touchstart', (e) => { isDragging = true; onMove(e); window.addEventListener('touchmove', onMove); window.addEventListener('touchend', onUp); }, { passive: false });
+    },
+
+    loadInitialState() {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'get_music_status' }));
+            ws.send(JSON.stringify({ type: 'get_songs' }));
+        }
+    },
+
+    updatePlaylist(songs) {
+        this.playlist = songs || [];
+        document.getElementById('musicCount').textContent = this.playlist.length;
+        const container = document.getElementById('musicPlaylist');
+        if (this.playlist.length === 0) {
+            container.innerHTML = '<div class="music-playlist-empty"><div class="icon">📂</div><div>暂无音乐，请将歌曲放入 data/music</div></div>';
+        } else {
+            container.innerHTML = '';
+            this.playlist.forEach((song, i) => {
+                const item = document.createElement('div');
+                item.className = 'music-playlist-item' + (i === this.currentIndex ? ' active' : '');
+                item.dataset.index = i;
+                item.innerHTML = `
+                    <div class="idx">${(i + 1).toString().padStart(2, '0')}</div>
+                    <div class="info">
+                        <div class="title">${escapeHtml(song.title || song.filename || '未知')}</div>
+                        <div class="artist">${escapeHtml(song.artist || '未知艺术家')}</div>
+                    </div>
+                    <div class="playing-mark">${i === this.currentIndex ? '♪' : ''}</div>
+                `;
+                item.addEventListener('click', () => this.playIndex(i));
+                container.appendChild(item);
+            });
+        }
+    },
+
+    updateCurrentSong(songData) {
+        const card = document.getElementById('musicPlayerCard');
+        if (songData && (songData.song_name || songData.title)) {
+            card.classList.remove('hidden');
+            const newTitle = songData.song_name || songData.title || '未知';
+            const oldTitle = document.getElementById('musicTitle').textContent;
+            document.getElementById('musicTitle').textContent = newTitle;
+            // 歌曲切换时重置进度
+            if (newTitle !== oldTitle) {
+                this.position = 0;
+                this.duration = 0;
+                this.updateProgressUI();
+            }
+            const artist = songData.artist || '';
+            const artistEl = document.getElementById('musicArtist');
+            if (artist) {
+                artistEl.textContent = artist;
+                artistEl.classList.remove('empty');
+            } else {
+                artistEl.textContent = '未知艺术家';
+                artistEl.classList.add('empty');
+            }
+            // 修复bug：使用后端传来的 song_index，不再硬编码 -1
+            if (typeof songData.song_index === 'number' && songData.song_index >= 0) {
+                this.currentIndex = songData.song_index;
+                this.refreshPlaylistActive();
+            }
+        }
+    },
+
+    setStatus(status) {
+        const playBtn = document.getElementById('musicPlayBtn');
+        const cover = document.getElementById('musicCover');
+        const dot = document.getElementById('musicStatusDot');
+        const text = document.getElementById('musicStatusText');
+
+        if (status === 'playing') {
+            this.isPlaying = true; this.isPaused = false;
+            playBtn.textContent = '⏸';
+            cover.className = 'music-cover playing';
+            dot.className = 'dot';
+            text.textContent = '播放中';
+            this.startProgressTimer();
+            ParticleEngine.setMusicActive(true);
+        } else if (status === 'paused') {
+            this.isPlaying = false; this.isPaused = true;
+            playBtn.textContent = '▶';
+            cover.className = 'music-cover paused';
+            dot.className = 'dot paused';
+            text.textContent = '已暂停';
+            this.stopProgressTimer();
+            ParticleEngine.setMusicActive(false);
+        } else {
+            this.isPlaying = false; this.isPaused = false;
+            playBtn.textContent = '▶';
+            cover.className = 'music-cover';
+            dot.className = 'dot stopped';
+            text.textContent = '已停止';
+            this.stopProgressTimer();
+            this.position = 0;
+            this.duration = 0;
+            this.updateProgressUI();
+            ParticleEngine.setMusicActive(false);
+        }
+    },
+
+    formatTime(seconds) {
+        if (!seconds || isNaN(seconds) || seconds < 0) return '00:00';
+        const m = Math.floor(seconds / 60);
+        const s = Math.floor(seconds % 60);
+        return m.toString().padStart(2, '0') + ':' + s.toString().padStart(2, '0');
+    },
+
+    updateProgressUI() {
+        const pct = this.duration > 0 ? (this.position / this.duration) * 100 : 0;
+        document.getElementById('musicProgressFill').style.width = Math.min(100, Math.max(0, pct)) + '%';
+        document.getElementById('musicCurTime').textContent = this.formatTime(this.position);
+        document.getElementById('musicDurTime').textContent = this.formatTime(this.duration);
+    },
+
+    startProgressTimer() {
+        this.stopProgressTimer();
+        // 每500ms本地递增播放位置，实现平滑进度条
+        this.progressTimer = setInterval(() => {
+            if (this.isPlaying && this.duration > 0) {
+                this.position += 0.5;
+                if (this.position >= this.duration) {
+                    this.position = this.duration;
+                }
+                this.updateProgressUI();
+            }
+        }, 500);
+    },
+
+    stopProgressTimer() {
+        if (this.progressTimer) {
+            clearInterval(this.progressTimer);
+            this.progressTimer = null;
+        }
+    },
+
+    syncProgress(position, duration) {
+        // 用后端数据校准本地进度，纠正偏差
+        this.position = position || 0;
+        this.duration = duration || 0;
+        this.updateProgressUI();
+    },
+
+    toggle() {
+        if (!this._canAction()) return;
+        sendWS({ type: 'music_toggle' });
+    },
+
+    next() {
+        if (!this._canAction()) return;
+        sendWS({ type: 'music_next' });
+    },
+
+    prev() {
+        if (!this._canAction()) return;
+        sendWS({ type: 'music_prev' });
+    },
+
+    stop() {
+        if (!this._canAction()) return;
+        sendWS({ type: 'music_stop' });
+    },
+
+    playIndex(idx) {
+        if (!this._canAction()) return;
+        sendWS({ type: 'music_play', song_index: idx });
+    },
+
+    toggleLoop() {
+        this.loopMode = (this.loopMode + 1) % 3;
+        const btn = document.getElementById('musicLoopBtn');
+        const modes = ['⟳', '↻', '⤮'];
+        const titles = ['列表循环', '单曲循环', '随机播放'];
+        btn.textContent = modes[this.loopMode];
+        btn.title = titles[this.loopMode];
+        btn.classList.toggle('active', this.loopMode !== 0);
+        ChatLog.addSystem(`循环模式: ${titles[this.loopMode]}`);
+    },
+
+    toggleCollapse() {
+        const card = document.getElementById('musicPlayerCard');
+        const body = document.getElementById('musicCardBody');
+        const btn = document.getElementById('musicCollapseBtn');
+        if (card.classList.contains('collapsed')) {
+            card.classList.remove('collapsed');
+            body.style.display = '';
+            btn.textContent = '−';
+        } else {
+            card.classList.add('collapsed');
+            body.style.display = 'none';
+            btn.textContent = '+';
+        }
+    },
+
+    seek(e) {
+        // 进度条点击 - 仅前端视觉跳转，后端暂不支持seek
+        const bar = document.getElementById('musicProgressBar');
+        const rect = bar.getBoundingClientRect();
+        const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        if (this.duration > 0) {
+            this.position = pct * this.duration;
+            this.updateProgressUI();
+            ChatLog.addSystem(`跳转至 ${this.formatTime(this.position)}`);
+        }
+    },
+
+    setVolumeFromBar(e) {
+        const bar = document.getElementById('musicVolumeBar');
+        const rect = bar.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+        const vol = Math.round(pct * 100);
+        console.log('[Music] setVolumeFromBar:', clientX, rect.left, rect.width, '->', vol + '%');
+        this.setVolume(vol);
+    },
+
+    setVolume(vol) {
+        // UI 即时更新（无节流，保证拖拽流畅）
+        this.volume = vol;
+        const fill = document.getElementById('musicVolumeFill');
+        if (fill) {
+            fill.style.width = vol + '%';
+        }
+        const icon = document.getElementById('volIcon');
+        if (icon) {
+            if (vol === 0) icon.textContent = '🔇';
+            else if (vol < 30) icon.textContent = '🔈';
+            else if (vol < 70) icon.textContent = '🔉';
+            else icon.textContent = '🔊';
+        }
+        // 后端发送：节流（150ms 内只发最后一次），避免高频拖拽时后端频繁重启播放
+        if (!this._syncingVolume) {
+            if (this._volumeSendTimer) clearTimeout(this._volumeSendTimer);
+            this._volumeSendTimer = setTimeout(() => {
+                sendWS({ type: 'music_volume', volume: vol });
+                this._volumeSendTimer = null;
+            }, 150);
+        }
+    },
+
+    /** 从后端同步音量到UI，不回发后端 */
+    syncVolumeFromBackend(vol) {
+        if (typeof vol !== 'number') return;
+        this._syncingVolume = true;
+        this.setVolume(vol);
+        this._syncingVolume = false;
+    },
+
+    refreshPlaylistActive() {
+        document.querySelectorAll('.music-playlist-item').forEach((el, i) => {
+            if (i === this.currentIndex) {
+                el.classList.add('active');
+                el.querySelector('.playing-mark').textContent = '♪';
+            } else {
+                el.classList.remove('active');
+                el.querySelector('.playing-mark').textContent = '';
+            }
+        });
+    }
+};
+
+
+// ===================== 枫叶飘落粒子引擎（Wallpaper林黛玉级效果） =====================
+const ParticleEngine = {
+    canvas: null,
+    ctx: null,
+    W: 0, H: 0,
+    farLeaves: [],    // 远景枫叶（小、淡、慢）
+    midLeaves: [],    // 中景枫叶（主视觉）
+    nearLeaves: [],   // 近景枫叶（大、快、清晰）
+    dust: [],         // 尘埃粒子
+    petals: [],       // 花瓣/小叶片
+    mouse: { x: -9999, y: -9999 },
+    state: 'idle',
+    musicActive: false,
+    pulsePhase: 0,
+    time: 0,
+    windX: 0,
+    windY: 0,
+    windTargetX: 0,
+    windTargetY: 0,
+    gustTimer: 0,
+
+    mapleColors: [
+        '#8B0000', '#A52A2A', '#B22222', '#CD5C5C',
+        '#DC143C', '#FF4500', '#FF6347', '#FF7F50',
+        '#FF8C00', '#FFA500', '#FFD700', '#DAA520',
+        '#CD853F', '#A0522D', '#8B4513', '#DEB887',
+        '#F4A460', '#D2691E', '#E25822', '#C04000'
+    ],
+
+    init() {
+        this.canvas = document.getElementById('particles');
+        this.ctx = this.canvas.getContext('2d');
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+        window.addEventListener('mousemove', (e) => {
+            this.mouse.x = e.clientX;
+            this.mouse.y = e.clientY;
+        });
+        window.addEventListener('mouseleave', () => {
+            this.mouse.x = -9999; this.mouse.y = -9999;
+        });
+        this.createAllParticles();
+        this.animate();
+    },
+
+    resize() {
+        this.W = this.canvas.width = window.innerWidth;
+        this.H = this.canvas.height = window.innerHeight;
+    },
+
+    createAllParticles() {
+        this.farLeaves = [];
+        for (let i = 0; i < 40; i++) this.farLeaves.push(this.makeLeaf('far', true));
+
+        this.midLeaves = [];
+        for (let i = 0; i < 50; i++) this.midLeaves.push(this.makeLeaf('mid', true));
+
+        this.nearLeaves = [];
+        for (let i = 0; i < 25; i++) this.nearLeaves.push(this.makeLeaf('near', true));
+    },
+
+    makeLeaf(layer, randomY = false) {
+        const depthMap = {
+            far:   { size: [6, 14],  speed: [0.15, 0.4], alpha: [0.2, 0.4], sway: [10, 25] },
+            mid:   { size: [14, 28], speed: [0.4, 0.9],  alpha: [0.5, 0.8], sway: [25, 55] },
+            near:  { size: [28, 55], speed: [0.9, 2.0],  alpha: [0.75, 1.0], sway: [50, 100] }
+        };
+        const d = depthMap[layer];
+        const size = d.size[0] + Math.random() * (d.size[1] - d.size[0]);
+        const speedY = d.speed[0] + Math.random() * (d.speed[1] - d.speed[0]);
+        const alpha = d.alpha[0] + Math.random() * (d.alpha[1] - d.alpha[0]);
+        const swayAmount = d.sway[0] + Math.random() * (d.sway[1] - d.sway[0]);
+
+        return {
+            x: Math.random() * this.W,
+            y: randomY ? Math.random() * this.H : -size - Math.random() * 200,
+            size: size,
+            baseSize: size,
+            alpha: alpha,
+            color: this.mapleColors[Math.floor(Math.random() * this.mapleColors.length)],
+            color2: this.mapleColors[Math.floor(Math.random() * this.mapleColors.length)],
+            speedY: speedY,
+            swaySpeed: 0.008 + Math.random() * 0.015,
+            swayAmount: swayAmount,
+            swayOffset: Math.random() * Math.PI * 2,
+            rotation: Math.random() * Math.PI * 2,
+            rotationSpeed: (Math.random() - 0.5) * 0.04,
+            flipPhase: Math.random() * Math.PI * 2,
+            flipSpeed: 0.015 + Math.random() * 0.025,
+            layer: layer,
+            depthValue: layer === 'far' ? 0.15 + Math.random() * 0.2 :
+                        layer === 'mid' ? 0.4 + Math.random() * 0.3 :
+                        0.75 + Math.random() * 0.25,
+            vortexOffset: Math.random() * 1000,
+            leafType: Math.floor(Math.random() * 3),
+        };
+    },
+
+    makeDust(randomY = false) {
+        return {
+            x: Math.random() * this.W,
+            y: randomY ? Math.random() * this.H : -Math.random() * 100,
+            size: 0.5 + Math.random() * 2,
+            alpha: 0.1 + Math.random() * 0.3,
+            speedY: 0.1 + Math.random() * 0.3,
+            speedX: (Math.random() - 0.5) * 0.3,
+            phase: Math.random() * Math.PI * 2,
+            phaseSpeed: 0.01 + Math.random() * 0.02,
+        };
+    },
+
+    makePetal(randomY = false) {
+        const depth = Math.random();
+        return {
+            x: Math.random() * this.W,
+            y: randomY ? Math.random() * this.H : -Math.random() * 100,
+            size: 2 + depth * 7,
+            alpha: 0.25 + depth * 0.5,
+            color: this.mapleColors[Math.floor(Math.random() * this.mapleColors.length)],
+            speedY: 0.2 + depth * 0.7,
+            speedX: (Math.random() - 0.5) * 0.8,
+            rotation: Math.random() * Math.PI * 2,
+            rotationSpeed: (Math.random() - 0.5) * 0.06,
+            depth: depth,
+            swayPhase: Math.random() * Math.PI * 2,
+            swaySpeed: 0.02 + Math.random() * 0.03,
+        };
+    },
+
+    setState(state) {
+        if (this.state === state) return;
+        this.state = state;
+        this.windTargetX = (Math.random() - 0.3) * 2;
+        this.gustTimer = 60 + Math.random() * 120;
+    },
+
+    setMusicActive(active) {
+        this.musicActive = active;
+    },
+
+    drawMapleLeaf(ctx, leaf) {
+        const s = leaf.size;
+        const flip = Math.cos(leaf.flipPhase);
+        const scaleX = Math.abs(flip) * 0.6 + 0.4;
+
+        ctx.save();
+        ctx.translate(leaf.x, leaf.y);
+        ctx.rotate(leaf.rotation);
+        ctx.scale(scaleX, 1);
+
+        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, s * 0.55);
+        gradient.addColorStop(0, leaf.color2);
+        gradient.addColorStop(0.4, leaf.color);
+        gradient.addColorStop(1, this.darkenColor(leaf.color, 0.35));
+
+        ctx.fillStyle = gradient;
+        ctx.globalAlpha = leaf.alpha;
+        ctx.shadowBlur = 2 + leaf.depthValue * 10;
+        ctx.shadowColor = leaf.color;
+
+        ctx.beginPath();
+
+        if (leaf.leafType === 0) {
+            ctx.moveTo(0, -s * 0.85);
+            ctx.quadraticCurveTo(s * 0.12, -s * 0.55, s * 0.18, -s * 0.3);
+            ctx.lineTo(s * 0.45, -s * 0.65);
+            ctx.quadraticCurveTo(s * 0.6, -s * 0.55, s * 0.5, -s * 0.2);
+            ctx.lineTo(s * 0.8, -s * 0.1);
+            ctx.quadraticCurveTo(s * 0.9, s * 0.08, s * 0.6, s * 0.18);
+            ctx.lineTo(s * 0.65, s * 0.45);
+            ctx.quadraticCurveTo(s * 0.55, s * 0.68, s * 0.25, s * 0.5);
+            ctx.lineTo(s * 0.22, s * 0.78);
+            ctx.quadraticCurveTo(s * 0.1, s * 0.92, 0, s * 0.65);
+            ctx.quadraticCurveTo(-s * 0.1, s * 0.92, -s * 0.22, s * 0.78);
+            ctx.lineTo(-s * 0.25, s * 0.5);
+            ctx.quadraticCurveTo(-s * 0.55, s * 0.68, -s * 0.65, s * 0.45);
+            ctx.lineTo(-s * 0.6, s * 0.18);
+            ctx.quadraticCurveTo(-s * 0.9, s * 0.08, -s * 0.8, -s * 0.1);
+            ctx.lineTo(-s * 0.5, -s * 0.2);
+            ctx.quadraticCurveTo(-s * 0.6, -s * 0.55, -s * 0.45, -s * 0.65);
+            ctx.lineTo(-s * 0.18, -s * 0.3);
+            ctx.quadraticCurveTo(-s * 0.12, -s * 0.55, 0, -s * 0.85);
+        } else if (leaf.leafType === 1) {
+            ctx.moveTo(0, -s * 0.9);
+            ctx.quadraticCurveTo(s * 0.2, -s * 0.6, s * 0.15, -s * 0.25);
+            ctx.lineTo(s * 0.55, -s * 0.5);
+            ctx.quadraticCurveTo(s * 0.75, -s * 0.35, s * 0.55, -s * 0.05);
+            ctx.lineTo(s * 0.85, s * 0.15);
+            ctx.quadraticCurveTo(s * 0.75, s * 0.4, s * 0.4, s * 0.3);
+            ctx.lineTo(s * 0.45, s * 0.65);
+            ctx.quadraticCurveTo(s * 0.25, s * 0.8, 0, s * 0.55);
+            ctx.quadraticCurveTo(-s * 0.25, s * 0.8, -s * 0.45, s * 0.65);
+            ctx.lineTo(-s * 0.4, s * 0.3);
+            ctx.quadraticCurveTo(-s * 0.75, s * 0.4, -s * 0.85, s * 0.15);
+            ctx.lineTo(-s * 0.55, -s * 0.05);
+            ctx.quadraticCurveTo(-s * 0.75, -s * 0.35, -s * 0.55, -s * 0.5);
+            ctx.lineTo(-s * 0.15, -s * 0.25);
+            ctx.quadraticCurveTo(-s * 0.2, -s * 0.6, 0, -s * 0.9);
+        } else {
+            ctx.moveTo(0, -s * 0.8);
+            ctx.quadraticCurveTo(s * 0.08, -s * 0.5, s * 0.12, -s * 0.28);
+            ctx.lineTo(s * 0.35, -s * 0.55);
+            ctx.quadraticCurveTo(s * 0.5, -s * 0.45, s * 0.4, -s * 0.18);
+            ctx.lineTo(s * 0.65, -s * 0.08);
+            ctx.quadraticCurveTo(s * 0.75, s * 0.1, s * 0.5, s * 0.2);
+            ctx.lineTo(s * 0.52, s * 0.48);
+            ctx.quadraticCurveTo(s * 0.38, s * 0.65, s * 0.18, s * 0.48);
+            ctx.lineTo(s * 0.15, s * 0.72);
+            ctx.quadraticCurveTo(s * 0.05, s * 0.85, 0, s * 0.58);
+            ctx.quadraticCurveTo(-s * 0.05, s * 0.85, -s * 0.15, s * 0.72);
+            ctx.lineTo(-s * 0.18, s * 0.48);
+            ctx.quadraticCurveTo(-s * 0.38, s * 0.65, -s * 0.52, s * 0.48);
+            ctx.lineTo(-s * 0.5, s * 0.2);
+            ctx.quadraticCurveTo(-s * 0.75, s * 0.1, -s * 0.65, -s * 0.08);
+            ctx.lineTo(-s * 0.4, -s * 0.18);
+            ctx.quadraticCurveTo(-s * 0.5, -s * 0.45, -s * 0.35, -s * 0.55);
+            ctx.lineTo(-s * 0.12, -s * 0.28);
+            ctx.quadraticCurveTo(-s * 0.08, -s * 0.5, 0, -s * 0.8);
+        }
+
+        ctx.closePath();
+        ctx.fill();
+
+        if (leaf.depthValue > 0.4) {
+            ctx.globalAlpha = leaf.alpha * 0.35;
+            ctx.strokeStyle = this.darkenColor(leaf.color, 0.45);
+            ctx.lineWidth = 0.6;
+            ctx.beginPath();
+            ctx.moveTo(0, -s * 0.7);
+            ctx.lineTo(0, s * 0.45);
+            ctx.moveTo(0, -s * 0.35);
+            ctx.lineTo(s * 0.3, -s * 0.4);
+            ctx.moveTo(0, -s * 0.1);
+            ctx.lineTo(s * 0.45, 0);
+            ctx.moveTo(0, s * 0.18);
+            ctx.lineTo(s * 0.32, s * 0.32);
+            ctx.moveTo(0, -s * 0.35);
+            ctx.lineTo(-s * 0.3, -s * 0.4);
+            ctx.moveTo(0, -s * 0.1);
+            ctx.lineTo(-s * 0.45, 0);
+            ctx.moveTo(0, s * 0.18);
+            ctx.lineTo(-s * 0.32, s * 0.32);
+            ctx.stroke();
+        }
+
+        ctx.restore();
+    },
+
+    drawPetal(ctx, petal) {
+        ctx.save();
+        ctx.translate(petal.x, petal.y);
+        ctx.rotate(petal.rotation);
+
+        const s = petal.size;
+        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, s);
+        gradient.addColorStop(0, petal.color);
+        gradient.addColorStop(1, this.darkenColor(petal.color, 0.2));
+
+        ctx.fillStyle = gradient;
+        ctx.globalAlpha = petal.alpha;
+        ctx.shadowBlur = 2;
+        ctx.shadowColor = petal.color;
+
+        ctx.beginPath();
+        ctx.ellipse(0, 0, s, s * 0.45, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+    },
+
+    drawDust(ctx, dust) {
+        ctx.save();
+        ctx.globalAlpha = dust.alpha;
+        ctx.fillStyle = '#ffd700';
+        ctx.shadowBlur = 3;
+        ctx.shadowColor = '#ffaa00';
+        ctx.beginPath();
+        ctx.arc(dust.x, dust.y, dust.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    },
+
+    darkenColor(color, amount) {
+        const hex = color.replace('#', '');
+        const r = Math.max(0, parseInt(hex.substr(0, 2), 16) * (1 - amount));
+        const g = Math.max(0, parseInt(hex.substr(2, 2), 16) * (1 - amount));
+        const b = Math.max(0, parseInt(hex.substr(4, 2), 16) * (1 - amount));
+        return `rgb(${Math.floor(r)},${Math.floor(g)},${Math.floor(b)})`;
+    },
+
+    updateWind(dt) {
+        this.gustTimer -= 1;
+        if (this.gustTimer <= 0) {
+            this.windTargetX = (Math.random() - 0.3) * 2.5;
+            this.windTargetY = (Math.random() - 0.5) * 0.3;
+            this.gustTimer = 100 + Math.random() * 200;
+        }
+
+        this.windX += (this.windTargetX - this.windX) * 0.005;
+        this.windY += (this.windTargetY - this.windY) * 0.005;
+
+        const baseWind = Math.sin(this.time * 0.001) * 0.5;
+        this.windX += baseWind * 0.3;
+    },
+
+    updateLeaf(leaf, speedMult = 1) {
+        leaf.swayOffset += leaf.swaySpeed * speedMult;
+        leaf.flipPhase += leaf.flipSpeed * speedMult;
+        leaf.rotation += leaf.rotationSpeed * speedMult;
+
+        const swayX = Math.sin(leaf.swayOffset) * leaf.swayAmount * 0.015;
+        const vortexX = Math.sin(this.time * 0.002 + leaf.vortexOffset) * 0.3;
+
+        leaf.y += leaf.speedY * speedMult;
+        leaf.x += (this.windX * (0.5 + leaf.depthValue * 0.8) + swayX + vortexX) * speedMult;
+        leaf.y += this.windY * leaf.depthValue * speedMult;
+
+        const dx = this.mouse.x - leaf.x;
+        const dy = this.mouse.y - leaf.y;
+        const dist2 = dx * dx + dy * dy;
+        if (dist2 < 15000) {
+            const force = (1 - Math.sqrt(dist2) / 120) * 0.5;
+            leaf.x -= dx * force * 0.08;
+            leaf.y -= dy * force * 0.05;
+        }
+
+        if (leaf.y > this.H + 80 || leaf.x < -120 || leaf.x > this.W + 120) {
+            const newLeaf = this.makeLeaf(leaf.layer, false);
+            Object.assign(leaf, newLeaf);
+            if (leaf.y > this.H + 80) {
+                leaf.x = Math.random() * this.W;
+            } else if (leaf.x < -120) {
+                leaf.x = this.W + 50;
+                leaf.y = Math.random() * this.H * 0.7;
+            } else {
+                leaf.x = -50;
+                leaf.y = Math.random() * this.H * 0.7;
+            }
+        }
+    },
+
+    animate() {
+        const ctx = this.ctx;
+        ctx.clearRect(0, 0, this.W, this.H);
+
+        this.time += 16;
+        this.pulsePhase += 0.02;
+        this.updateWind();
+
+        const musicSpeedBoost = this.musicActive ? 1.25 : 1;
+        const musicPulse = this.musicActive ? (Math.sin(this.pulsePhase * 1.5) * 0.15 + 0.92) : 1;
+
+        // --- 远景枫叶 ---
+        for (let leaf of this.farLeaves) {
+            this.updateLeaf(leaf, musicSpeedBoost);
+            this.drawMapleLeaf(ctx, leaf);
+        }
+
+        // --- 中景枫叶 ---
+        for (let leaf of this.midLeaves) {
+            this.updateLeaf(leaf, musicSpeedBoost);
+            this.drawMapleLeaf(ctx, leaf);
+        }
+
+        // --- 近景枫叶 ---
+        for (let leaf of this.nearLeaves) {
+            this.updateLeaf(leaf, musicSpeedBoost);
+            leaf.size = leaf.baseSize * musicPulse;
+            this.drawMapleLeaf(ctx, leaf);
+            leaf.size = leaf.baseSize;
+        }
+
+        requestAnimationFrame(() => this.animate());
+    }
+};
+
+
+// ===================== 时钟 =====================
+(function() {
+    function update() {
+        const now = new Date();
+        const h = String(now.getHours()).padStart(2,'0');
+        const m = String(now.getMinutes()).padStart(2,'0');
+        const s = String(now.getSeconds()).padStart(2,'0');
+        document.getElementById('clock').textContent = `${h}:${m}:${s}`;
+        const week = ['日','一','二','三','四','五','六'];
+        document.getElementById('date').textContent =
+            `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} 周${week[now.getDay()]}`;
+    }
+    update();
+    setInterval(update, 1000);
+})();
+
+// ===================== 遥测渲染 =====================
+const Telemetry = {
+    circumference: 2 * Math.PI * 38, // r=38
+    update(data) {
+        const cpu = data.cpu ?? 0;
+        const mem = data.memory ?? data.mem ?? 0;
+        const temp = data.temperature ?? data.temp ?? 0;
+        const wifi = data.wifi_rssi ?? data.rssi ?? -50;
+
+        // CPU
+        document.getElementById('cpu-val').textContent = cpu;
+        document.getElementById('cpu-bar').style.width = cpu + '%';
+        const cpuOffset = this.circumference - (cpu / 100) * this.circumference;
+        document.getElementById('cpu-fill').style.strokeDashoffset = cpuOffset;
+
+        // Mem
+        document.getElementById('mem-val').textContent = mem + '%';
+        document.getElementById('mem-bar').style.width = mem + '%';
+
+        // Temp
+        document.getElementById('temp-val').textContent = temp;
+        const tempPct = Math.min(100, (temp / 80) * 100);
+        const tempOffset = this.circumference - (tempPct / 100) * this.circumference;
+        document.getElementById('temp-fill').style.strokeDashoffset = tempOffset;
+
+        // WiFi
+        document.getElementById('wifi-val').textContent = wifi;
+    }
+};
+
+// 模拟遥测（连接前）
+let simInterval = setInterval(() => {
+    const t = Date.now() / 1000;
+    Telemetry.update({
+        cpu: Math.round(30 + Math.sin(t * 0.8) * 20 + Math.sin(t * 1.3) * 10),
+        memory: Math.round(45 + Math.sin(t * 0.5) * 15 + Math.sin(t * 0.9) * 8),
+        temperature: Math.round(42 + Math.sin(t * 0.3) * 10 + Math.sin(t * 0.7) * 5),
+        wifi_rssi: Math.round(-50 + Math.sin(t * 0.6) * 15)
+    });
+}, 800);
+
+// ===================== 对话日志 =====================
+const ChatLog = {
+    el: document.getElementById('chat-log'),
+    add(text, sender) {
+        const div = document.createElement('div');
+        div.className = 'chat-msg ' + sender;
+        const time = new Date().toLocaleTimeString('zh-CN', {hour12:false});
+        const senderName = sender === 'user' ? '你' : sender === 'assistant' ? '小智' : '系统';
+        const color = sender === 'user' ? 'color:var(--success)' : sender === 'assistant' ? 'color:var(--accent)' : 'color:var(--warning)';
+        div.innerHTML = `<div class="time">[${time}]</div><span class="sender" style="${color}">${senderName}:</span> ${escapeHtml(text)}`;
+        this.el.appendChild(div);
+        this.el.scrollTop = this.el.scrollHeight;
+    },
+    addSystem(text) {
+        const div = document.createElement('div');
+        div.className = 'chat-msg system';
+        div.innerHTML = `<span class="sender">$</span> ${escapeHtml(text)}`;
+        this.el.appendChild(div);
+        this.el.scrollTop = this.el.scrollHeight;
+    },
+    clear() { this.el.innerHTML = ''; }
+};
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// ===================== Toast通知 =====================
+function showToast(msg, type = 'info', duration = 2500) {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+    const t = document.createElement('div');
+    t.className = `toast toast-${type}`;
+    t.textContent = msg;
+    container.appendChild(t);
+    requestAnimationFrame(() => t.classList.add('show'));
+    setTimeout(() => {
+        t.classList.remove('show');
+        setTimeout(() => t.remove(), 300);
+    }, duration);
+}
+
+// ===================== WebSocket =====================
+const WS_URL = 'ws://localhost:8765';
+let ws = null;
+let reconnectTimer = null;
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 20; // 最大重连次数，防止无限循环
+let heartbeatTimer = null;
+let lastHeartbeatTime = 0;
+const HEARTBEAT_INTERVAL = 15000;  // 心跳发送间隔(ms)
+const HEARTBEAT_TIMEOUT = 60000;   // 心跳超时(ms)
+
+function connectWS() {
+    if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) return;
+
+    console.log('[WS] Connecting to', WS_URL);
+    updateConnStatus('connecting');
+
+    try {
+        ws = new WebSocket(WS_URL);
+
+        ws.onopen = () => {
+            console.log('[WS] Connected!');
+            updateConnStatus('connected');
+            reconnectAttempts = 0;
+            if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+            hideReconnectToast();
+            ChatLog.addSystem('已连接到语音核心');
+            // 停止模拟
+            if (simInterval) { clearInterval(simInterval); simInterval = null; }
+            // 启动心跳
+            startHeartbeat();
+        };
+
+        ws.onmessage = (e) => {
+            try {
+                const msg = JSON.parse(e.data);
+                lastHeartbeatTime = Date.now();
+                if (msg.type === 'pong') {
+                    console.log('[WS] Heartbeat pong');
+                    return;
+                }
+                console.log('[WS] Msg:', msg.type, msg);
+                handleMsg(msg);
+            } catch(err) {
+                console.error('[WS] Parse error:', err);
+            }
+        };
+
+        ws.onclose = (e) => {
+            console.log('[WS] Closed:', e.code, e.reason);
+            updateConnStatus('disconnected');
+            stopHeartbeat();
+            scheduleReconnect();
+        };
+
+        ws.onerror = (e) => {
+            console.error('[WS] Error:', e);
+        };
+    } catch(err) {
+        console.error('[WS] Create failed:', err);
+        scheduleReconnect();
+    }
+}
+
+function scheduleReconnect() {
+    if (reconnectTimer) return;
+    reconnectAttempts++;
+    // 修复bug：限制最大重连次数，防止无限重连
+    if (reconnectAttempts > MAX_RECONNECT_ATTEMPTS) {
+        console.log('[WS] Max reconnect attempts reached, giving up');
+        showReconnectToast('连接失败，请检查服务后刷新页面');
+        return;
+    }
+    const delay = Math.min(1000 * Math.pow(1.5, reconnectAttempts), 30000);
+    console.log(`[WS] Reconnect ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS} in ${delay}ms`);
+    showReconnectToast(`重连中... (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`);
+    reconnectTimer = setTimeout(() => {
+        reconnectTimer = null;
+        connectWS();
+    }, delay);
+}
+
+function startHeartbeat() {
+    stopHeartbeat();
+    lastHeartbeatTime = Date.now();
+    heartbeatTimer = setInterval(() => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'ping' }));
+        }
+        if (Date.now() - lastHeartbeatTime > HEARTBEAT_TIMEOUT) {
+            console.warn('[WS] Heartbeat timeout, reconnecting...');
+            if (ws) { try { ws.close(1000, 'Heartbeat timeout'); } catch (e) {} }
+        }
+    }, HEARTBEAT_INTERVAL);
+}
+
+function stopHeartbeat() {
+    if (heartbeatTimer) {
+        clearInterval(heartbeatTimer);
+        heartbeatTimer = null;
+    }
+}
+
+function updateConnStatus(status) {
+    const el = document.getElementById('connStatus');
+    const txt = document.getElementById('connText');
+    el.className = 'conn';
+    if (status === 'connected') {
+        el.classList.add('connected');
+        txt.textContent = '已连接';
+    } else if (status === 'connecting') {
+        el.classList.add('connecting');
+        txt.textContent = '连接中...';
+    } else {
+        el.classList.add('disconnected');
+        txt.textContent = '已断开';
+    }
+}
+
+function showReconnectToast(text) {
+    const t = document.getElementById('reconnect-toast');
+    t.textContent = text;
+    t.classList.add('show');
+}
+function hideReconnectToast() {
+    document.getElementById('reconnect-toast').classList.remove('show');
+}
+
+// ===================== 消息处理 =====================
+const StateMap = {
+    idle: '空闲中', listening: '正在聆听', processing: '思考中...',
+    speaking: '正在回答', thinking: '思考中...', responding: '正在回答',
+    PLAYING_MUSIC: '播放音乐中', playing_music: '播放音乐中', music: '播放音乐中',
+    error: '出错了'
+};
+
+let currentState = 'idle';
+
+function setState(state) {
+    // 归一化状态名：统一为小写
+    let normalizedState = state;
+    if (state === 'PLAYING_MUSIC') normalizedState = 'playing_music';
+    if (state === 'responding') normalizedState = 'speaking';
+    if (state === 'processing') normalizedState = 'thinking';
+
+    if (currentState === normalizedState) return;
+    currentState = normalizedState;
+    console.log('[State]', normalizedState);
+
+    const wrap = document.getElementById('spriteWrap');
+    wrap.className = 'sprite-wrap state-' + normalizedState;
+
+    const stateText = StateMap[state] || StateMap[normalizedState] || state;
+    document.getElementById('stateText').textContent = stateText;
+
+    // 同步粒子引擎状态
+    ParticleEngine.setState(normalizedState);
+
+    // 面部动画
+    const mouth = document.getElementById('mouth');
+    const eyeL = document.getElementById('eyeL');
+    const eyeR = document.getElementById('eyeR');
+    const cheekL = document.getElementById('cheekL');
+    const cheekR = document.getElementById('cheekR');
+
+    if (normalizedState === 'listening') {
+        mouth.setAttribute('d', 'M70 130 Q100 130 130 130');
+        eyeL.setAttribute('r', '3'); eyeR.setAttribute('r', '3');
+        cheekL.setAttribute('opacity', '0.8'); cheekR.setAttribute('opacity', '0.8');
+        document.getElementById('stateSub').textContent = '请说话...';
+    } else if (normalizedState === 'thinking') {
+        mouth.setAttribute('d', 'M70 135 Q100 140 130 135');
+        eyeL.setAttribute('r', '6'); eyeR.setAttribute('r', '6');
+        cheekL.setAttribute('opacity', '0.3'); cheekR.setAttribute('opacity', '0.3');
+        document.getElementById('stateSub').textContent = '大模型推理中...';
+    } else if (normalizedState === 'speaking') {
+        mouth.setAttribute('d', 'M70 125 Q100 145 130 125');
+        eyeL.setAttribute('r', '6'); eyeR.setAttribute('r', '6');
+        cheekL.setAttribute('opacity', '1'); cheekR.setAttribute('opacity', '1');
+        document.getElementById('stateSub').textContent = '语音播报中...';
+    } else if (normalizedState === 'playing_music') {
+        mouth.setAttribute('d', 'M70 128 Q100 148 130 128');
+        eyeL.setAttribute('r', '4'); eyeR.setAttribute('r', '4');
+        cheekL.setAttribute('opacity', '0.9'); cheekR.setAttribute('opacity', '0.9');
+        document.getElementById('stateSub').textContent = '音乐播放中，尽情享受吧~';
+    } else {
+        mouth.setAttribute('d', 'M70 130 Q100 145 130 130');
+        eyeL.setAttribute('r', '6'); eyeR.setAttribute('r', '6');
+        cheekL.setAttribute('opacity', '0.3'); cheekR.setAttribute('opacity', '0.3');
+        document.getElementById('stateSub').textContent = '说"你好小智"来唤醒我';
+    }
+}
+
+function handleMsg(msg) {
+    switch(msg.type) {
+        case 'welcome':
+            ChatLog.addSystem('欢迎: ' + msg.message);
+            // 连接成功后请求音乐列表和状态
+            MusicPlayer.loadInitialState();
+            break;
+        case 'state_change':
+        case 'state_sync':
+        case 'dialog_state_changed':
+        case 'state_info':
+            setState(msg.to_state || msg.state || 'idle');
+            break;
+        case 'wakeword_detected':
+        case 'wake_simulated':
+            setState('listening');
+            ChatLog.addSystem('唤醒词已检测');
+            break;
+        case 'audio_start':
+        case 'vad_start':
+            setState('listening');
+            break;
+        case 'audio_stop':
+        case 'vad_end':
+            setState('processing');
+            break;
+        case 'audio_output':
+            setState('speaking');
+            break;
+        case 'audio_complete':
+            setState('idle');
+            break;
+        case 'nlp_sentence_chunk':
+            // 语义块用于触发状态动画，但不立即显示文字
+            setState('speaking');
+            break;
+        case 'nlp_response_done':
+            // NLP完整回复完成后，一次性显示在屏幕上
+            if (msg.text) {
+                ChatLog.add(msg.text, 'assistant');
+            }
+            console.log('[WS] NLP response done:', msg.text?.substring(0, 50));
+            // 恢复输入框和发送按钮
+            const chatInput = document.getElementById('chat-input');
+            const sendBtn = document.getElementById('send-btn');
+            if (chatInput) { chatInput.disabled = false; chatInput.focus(); }
+            if (sendBtn) { sendBtn.disabled = false; }
+            break;
+        case 'audio_interrupt':
+            setState('idle');
+            showToast('已中断', 'info');
+            // 恢复输入框
+            const inp = document.getElementById('chat-input');
+            const sbtn = document.getElementById('send-btn');
+            if (inp) { inp.disabled = false; }
+            if (sbtn) { sbtn.disabled = false; }
+            break;
+        case 'system_status':
+            if (msg.status === 'shutting_down' || msg.status === 'shutdown') {
+                console.log('[WS] 系统状态: ' + msg.status);
+                if (ws) { try { ws.close(1000, 'Backend shutdown'); } catch (e) {} }
+            }
+            break;
+        case 'skill_invoke':
+            ChatLog.addSystem('正在执行: ' + msg.skill);
+            break;
+        case 'skill_result':
+            if (msg.speak_text) {
+                ChatLog.add(msg.speak_text, 'assistant');
+            }
+            break;
+        case 'transcript_updated':
+        case 'transcript':
+            ChatLog.add(msg.text || '', 'user');
+            break;
+        case 'telemetry':
+            Telemetry.update(msg.data || msg);
+            break;
+        case 'music_play':
+        case 'music_playing':
+            MusicPlayer.setStatus('playing');
+            MusicPlayer.updateCurrentSong(msg);
+            setState('playing_music');
+            ChatLog.addSystem('正在播放: ' + (msg.song_name || '未知歌曲'));
+            break;
+        case 'music_pause':
+        case 'music_paused':
+            MusicPlayer.setStatus('paused');
+            MusicPlayer.updateCurrentSong(msg);
+            ChatLog.addSystem('音乐已暂停');
+            break;
+        case 'music_stop':
+        case 'music_stopped':
+            MusicPlayer.setStatus('stopped');
+            MusicPlayer.updateCurrentSong(msg);
+            ChatLog.addSystem('音乐已停止');
+            setState('idle');
+            break;
+        case 'music_status':
+            if (msg.is_playing) MusicPlayer.setStatus('playing');
+            else if (msg.is_paused) MusicPlayer.setStatus('paused');
+            else MusicPlayer.setStatus('stopped');
+            // 修复bug：使用后端实际 song_index，不再硬编码 -1
+            if (msg.current_song) {
+                MusicPlayer.updateCurrentSong({
+                    song_name: msg.current_song.title,
+                    artist: msg.current_song.artist,
+                    song_index: (typeof msg.song_index === 'number') ? msg.song_index : -1
+                });
+            }
+            // 修复bug：使用 syncVolumeFromBackend 避免音量回环
+            if (typeof msg.volume === 'number') {
+                MusicPlayer.syncVolumeFromBackend(msg.volume);
+            }
+            // 同步进度
+            if (typeof msg.position === 'number' && typeof msg.duration === 'number') {
+                MusicPlayer.syncProgress(msg.position, msg.duration);
+            }
+            break;
+        case 'music_progress':
+            // 后端每2秒推送一次，用于校准本地进度
+            MusicPlayer.syncProgress(msg.position || 0, msg.duration || 0);
+            break;
+        case 'music_volume_changed':
+            // 修复bug：使用 syncVolumeFromBackend 避免回环
+            if (typeof msg.volume === 'number') {
+                MusicPlayer.syncVolumeFromBackend(msg.volume);
+            }
+            break;
+        case 'music_resume':
+            MusicPlayer.setStatus('playing');
+            MusicPlayer.updateCurrentSong(msg);
+            setState('playing_music');
+            break;
+        case 'music_toggle_ack':
+            // toggle确认，等待真实状态事件广播
+            console.log('[WS] Music toggle acknowledged');
+            break;
+        case 'song_list':
+            MusicPlayer.updatePlaylist(msg.songs || []);
+            break;
+        case 'skill':
+            ChatLog.addSystem('执行技能: ' + msg.name);
+            break;
+        case 'model_status':
+            ChatLog.addSystem('模型状态: ' + msg.message);
+            break;
+        case 'text_received':
+            // 文本已收到确认，无需额外处理
+            break;
+        case 'interrupt_ack':
+            ChatLog.addSystem('已打断当前播放');
+            break;
+        case 'pong':
+            // 心跳响应，无需处理
+            break;
+        case 'mode_change':
+            ChatLog.addSystem('模式切换: ' + msg.mode_name);
+            break;
+        case 'error':
+            console.error('[WS] Server error:', msg.message);
+            ChatLog.addSystem('错误: ' + (msg.message || '未知错误'));
+            break;
+        case 'shutdown':
+            ChatLog.addSystem('系统正在关闭...');
+            showReconnectToast('系统正在关闭，请稍候...');
+            break;
+        default:
+            console.log('[WS] Unknown type:', msg.type);
+    }
+}
+
+function sendWS(data) {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(data));
+        return true;
+    }
+    ChatLog.addSystem('WebSocket未连接，无法发送');
+    return false;
+}
+
+// ===================== 事件绑定 =====================
+document.getElementById('send-btn').addEventListener('click', () => {
+    const input = document.getElementById('chat-input');
+    const btn = document.getElementById('send-btn');
+    const text = input.value.trim();
+    if (!text) return;
+    if (sendWS({ type: 'send_text', text })) {
+        ChatLog.add(text, 'user');
+        input.value = '';
+        input.disabled = true;
+        btn.disabled = true;
+    }
+});
+
+document.getElementById('chat-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('send-btn').click();
+});
+
+document.querySelectorAll('.quick-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const text = btn.dataset.cmd;
+        if (sendWS({ type: 'send_text', text })) {
+            ChatLog.add(text, 'user');
+        }
+    });
+});
+
+document.getElementById('wakeBtn').addEventListener('click', () => {
+    // 修复bug：使用 type 而非 action，与后端 message_type 匹配
+    sendWS({ type: 'simulate_wake' });
+    ChatLog.addSystem('模拟唤醒');
+});
+
+document.getElementById('stopBtn').addEventListener('click', () => {
+    // 修复bug：使用 type 而非 action
+    sendWS({ type: 'interrupt' });
+    ChatLog.addSystem('打断播放');
+});
+
+document.getElementById('musicBtn').addEventListener('click', () => {
+    sendWS({ type: 'send_text', text: '播放音乐' });
+    ChatLog.addSystem('请求播放音乐');
+});
+
+// 退出
+document.getElementById('exit-btn').addEventListener('click', () => {
+    document.getElementById('exit-dlg').classList.add('show');
+});
+document.getElementById('cancel-exit').addEventListener('click', () => {
+    document.getElementById('exit-dlg').classList.remove('show');
+});
+document.getElementById('confirm-exit').addEventListener('click', () => {
+    // 修复bug：后端只识别 type:'shutdown'，不识别 action:'shutdown'
+    sendWS({ type: 'shutdown' });
+    ChatLog.addSystem('已发送关闭指令，系统即将退出...');
+    // 修复bug：window.close() 在非脚本打开的窗口中无效，显示提示并延迟尝试
+    setTimeout(() => {
+        window.close();
+        // 如果 window.close() 无效，给用户提示
+        setTimeout(() => {
+            showReconnectToast('系统已关闭，可手动关闭此窗口');
+        }, 500);
+    }, 2000);
+});
+document.getElementById('exit-dlg').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('exit-dlg')) {
+        document.getElementById('exit-dlg').classList.remove('show');
+    }
+});
+
+// 启动连接
+window.addEventListener('load', () => {
+    console.log('[App] Loaded, connecting WS...');
+    ParticleEngine.init();
+    MusicPlayer.init();
+    connectWS();
+});
+
+window.addEventListener('beforeunload', () => {
+    stopHeartbeat();
+    if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+    if (ws) { try { ws.close(1000, 'Page unload'); } catch (e) {} }
+});
+</script>
+</body>
+</html>

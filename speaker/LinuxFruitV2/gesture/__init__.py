@@ -1,0 +1,1 @@
+from .slash_detector import SlashDetector, SlashEvent

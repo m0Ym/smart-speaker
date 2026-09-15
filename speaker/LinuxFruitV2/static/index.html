@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fruit Ninja - Web Edition</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+        
+        <div id="ui-overlay">
+            <div id="score-panel">
+                <div class="score-item">Score: <span id="score">0</span></div>
+                <div class="score-item">Combo: <span id="combo">x1</span></div>
+                <div class="score-item">Lives: <span id="lives">❤️❤️❤️</span></div>
+                <div class="score-item mode">Mode: <span id="mode">Limited Lives</span></div>
+            </div>
+            
+            <div id="start-screen" class="overlay">
+                <div class="overlay-content">
+                    <h1>Fruit Ninja</h1>
+                    <div id="current-mode">Limited Lives</div>
+                    <div id="high-score">High Score: 0</div>
+                    <button id="btn-start">START GAME</button>
+                    <button id="btn-switch-mode">SWITCH MODE</button>
+                </div>
+            </div>
+            
+            <div id="game-over-screen" class="overlay hidden">
+                <div class="overlay-content">
+                    <h1 id="game-over-title">Game Over</h1>
+                    <div id="final-score">Final Score: 0</div>
+                    <div id="final-combo">Max Combo: x1</div>
+                    <button id="btn-restart">RESTART</button>
+                </div>
+            </div>
+            
+            <div id="pause-screen" class="overlay hidden">
+                <div class="overlay-content">
+                    <h1 style="font-size: 48px;">Paused</h1>
+                    <button id="btn-pause-resume">▶️ Resume</button>
+                    <button id="btn-pause-restart">🔄 Restart</button>
+                    <button id="btn-pause-menu">🏠 Main Menu</button>
+                </div>
+            </div>
+            
+            <div id="toast" class="toast hidden"></div>
+        </div>
+        
+        <div id="controls-panel">
+            <button id="btn-pause" class="control-btn">⏸️ Pause</button>
+            <button id="btn-exit" class="control-btn exit-btn">🚪 Exit to Speaker</button>
+        </div>
+        
+        <div id="connection-status">
+            <span id="ws-status" class="status-disconnected">Disconnected</span>
+        </div>
+    </div>
+    
+    <script src="js/game_client.js"></script>
+    <script src="js/renderer.js"></script>
+    <script src="js/sound_manager.js"></script>
+    <script>
+        window.onload = function() {
+            const wsPortMeta = document.querySelector('meta[name="game-ws-port"]');
+            const wsPort = wsPortMeta ? wsPortMeta.content : '8765';
+            const wsUrl = `ws://${window.location.hostname}:${wsPort}`;
+            const gameClient = new GameClient(wsUrl);
+            const renderer = new Renderer('game-canvas', 1920, 1200);
+            const soundManager = new SoundManager();
+            
+            let _menuSoundPlayed = false;
+            
+            gameClient.onStateUpdate = function(state) {
+                renderer.render(state);
+                if (state.show_start_screen && !_menuSoundPlayed) {
+                    _menuSoundPlayed = true;
+                    soundManager.playMenu();
+                } else if (!state.show_start_screen) {
+                    _menuSoundPlayed = false;
+                }
+            };
+            
+            gameClient.onToast = function(message) {
+                renderer.showToast(message);
+            };
+            
+            gameClient.onGameOver = function(data) {
+                renderer.showGameOver(data);
+            };
+            
+            gameClient.onHighScores = function(scores) {
+                renderer.updateHighScores(scores);
+            };
+            
+            gameClient.onSound = function(soundType) {
+                soundManager.play(soundType);
+            };
+            
+            document.getElementById('btn-start').addEventListener('click', function() {
+                gameClient.startGame(renderer._currentMode);
+            });
+            
+            document.getElementById('btn-restart').addEventListener('click', function() {
+                gameClient.restartGame();
+            });
+            
+            document.getElementById('btn-switch-mode').addEventListener('click', function() {
+                gameClient.switchMode();
+            });
+            
+            document.getElementById('btn-pause').addEventListener('click', function() {
+                gameClient.pauseGame();
+            });
+            
+            document.getElementById('btn-pause-resume').addEventListener('click', function() {
+                gameClient.resumeGame();
+            });
+            
+            document.getElementById('btn-pause-restart').addEventListener('click', function() {
+                gameClient.restartGame();
+            });
+            
+            document.getElementById('btn-pause-menu').addEventListener('click', function() {
+                gameClient.returnToMenu();
+            });
+
+            document.getElementById('btn-exit').addEventListener('click', function() {
+                gameClient.exitToSpeaker();
+            });
+
+            gameClient.connect();
+            
+            renderer.start();
+        };
+    </script>
+</body>
+</html>
