@@ -324,7 +324,7 @@ class NLPProcessor(Subject, Observer):
 
         try:
             messages = [
-                {"role": "system", "content": "你是小音，一个智能音箱助手。以下是工具执行结果，请根据结果用自然语言回答用户。回答要简洁、口语化，适合语音播放。"},
+                {"role": "system", "content": "你是小智，一个智能音箱助手。以下是工具执行结果，请根据结果用自然语言回答用户。回答要简洁、口语化，适合语音播放。"},
                 {"role": "user", "content": user_text},
                 {"role": "system", "content": f"工具执行结果：{tool_result}"},
             ]
@@ -428,7 +428,7 @@ class NLPProcessor(Subject, Observer):
             context_copy = list(self._context[-5:])
 
         messages = [
-            {"role": "system", "content": "你是小音，一个智能音箱助手。回答要简洁、口语化，适合语音播放，每次回答控制在两三句话以内。不要使用markdown格式，不要列出编号，直接说自然的话。"},
+            {"role": "system", "content": "你是小智，一个智能音箱助手。回答要简洁、口语化，适合语音播放，每次回答控制在两三句话以内。不要使用markdown格式，不要列出编号，直接说自然的话。"},
             *[{"role": m.role, "content": m.content} for m in context_copy],
         ]
 
@@ -515,7 +515,7 @@ class NLPProcessor(Subject, Observer):
             self.manageContext(ChatMessage(role="user", content=text))
 
             messages = [
-                {"role": "system", "content": "你是小音，一个智能音箱助手。回答要简洁、口语化，适合语音播放，每次回答控制在两三句话以内。不要使用markdown格式，不要列出编号，直接说自然的话。"},
+                {"role": "system", "content": "你是小智，一个智能音箱助手。回答要简洁、口语化，适合语音播放，每次回答控制在两三句话以内。不要使用markdown格式，不要列出编号，直接说自然的话。"},
                 *[{"role": m.role, "content": m.content} for m in self._context[-5:]],
             ]
 

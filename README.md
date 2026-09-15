@@ -25,6 +25,7 @@
 - [使用指南](#-使用指南)
 - [系统架构](#-系统架构)
 - [核心技术详解](#-核心技术详解)
+- [本地大模型与微调方案](#-本地大模型与微调方案)
 - [配置参考](#-配置参考)
 - [项目结构](#-项目结构)
 - [模型说明](#-模型说明)
@@ -355,6 +356,84 @@ IDLE → WAKED_UP → LISTENING → PROCESSING → SPEAKING → IDLE
 
 ---
 
+## 🤖 本地大模型与微调方案
+
+### 模型选型：Qwen2.5-1.5B-Instruct
+
+系统默认对话模型为 **Qwen2.5-1.5B-Instruct**，以 **GGUF `q4_k_m` 4-bit 量化**格式运行（约 1GB），完全离线推理。
+
+**选型理由**：
+
+| 维度 | 说明 |
+|------|------|
+| 参数量 | 1.5B 在"中文能力 / 资源占用 / 推理速度"三者间取得平衡，可在嵌入式设备 CPU 或低端 GPU 上实时推理 |
+| 中文能力 | Qwen2.5 系列在中文指令遵循、口语理解上表现优异，契合中文语音交互场景 |
+| 指令遵循 | 支持系统提示词约束（口语化、短句），原生具备 Function Calling / 工具调用能力 |
+| 离线部署 | GGUF 量化后单文件部署，llama.cpp 推理无需任何云端依赖 |
+
+### 推理配置（`src/nlp/processor.py` + `config.py`）
+
+| 参数 | 默认值 | 说明 |
+|------|--------|------|
+| `n_ctx` / `max_context_length` | 2048 | 上下文窗口 |
+| `n_gpu_layers` | 30 | GPU 卸载层数（无 GPU 时改为 0 纯 CPU 推理） |
+| `num_threads` | 4 | CPU 推理线程数 |
+| `temperature` | 0.7 | 采样温度 |
+| `top_p` | 0.9 | 核采样 |
+| `llm_max_tokens` | 150 | 单次回复最大 Token（语音场景限长） |
+| `offline_mode` | true | 强制离线推理 |
+
+### 语音场景的提示词工程
+
+语音对话与文字对话不同，系统通过 system prompt 约束输出风格：
+
+```
+你是小智，一个智能音箱助手。回答要简洁、口语化，适合语音播放，
+每次回答控制在两三句话以内。不要使用markdown格式，不要列出编号，
+直接说自然的话。
+```
+
+同时配合 `SemanticChunker` 语义分块：LLM 流式输出按 `。！？` 切句，逐句送入 TTS，实现 **"边说边生成"** 的低首字延迟体验。
+
+### 工具调用协议（Function Calling）
+
+采用文本协议 + 结构化解析两段式：
+
+```
+用户："播放音乐"
+  ↓
+LLM 输出：TOOL:music_play(歌曲=默认)
+  ↓
+_detect_function_call 解析 → ToolExecutor 执行 → 结果回填上下文 → 生成最终口语回复
+```
+
+工具清单由 `system_tools` 注册（`TOOLS_DESCRIPTIONS`），LLM 通过 system prompt 获知可用工具及调用格式。
+
+### 微调方案（LoRA / QLoRA）
+
+系统在推理侧**已就绪 LoRA 适配器加载能力**：配置 `LORA_ADAPTER_PATH` 指向微调产出的 LoRA 权重后，`Llama.load_lora()` 会在模型加载时自动挂载，无需改动业务代码。
+
+典型的端到端微调路线（基于 Qwen2.5-1.5B）：
+
+```
+基座模型 Qwen2.5-1.5B-Instruct
+   │
+   ├─ ① SFT / QLoRA 微调（4-bit 量化基座 + LoRA 低秩适配）
+   │    目标：语音人设对齐、口语化表达、工具调用格式强化
+   │    数据：人机对话语料 + 音箱场景指令样本（唤醒、音乐、天气、家居等）
+   │
+   ├─ ② DPO 偏好对齐（可选）
+   │    目标：降低冗长/啰嗦回复比例，提升语音可听性
+   │
+   └─ ③ 导出 GGUF + LoRA 适配器
+        基座：qwen2.5-1.5b-instruct-q4_k_m.gguf
+        LoRA：微调产物 → 部署端 LORA_ADAPTER_PATH 加载
+```
+
+> **说明**：本项目当前**未附带微调训练脚本与数据集**（开发时间与算力受限），但 LoRA 加载接口、模型路径、System Prompt 均按上述方案设计就绪。如需微调，可基于 llama.cpp / PEFT 生态自行产出 LoRA 适配器后无缝接入。
+
+---
+
 ## ⚙️ 配置参考
 
 所有配置集中在 `src/config.py`（pydantic 模型，类型安全），通过项目根目录 `.env` 文件以环境变量覆盖：
@@ -378,8 +457,11 @@ TTS_VOICE=zh-CN-XiaoxiaoNeural
 # ===== NLP / LLM =====
 OFFLINE_MODE=true               # 离线大模型推理
 NLP_MODEL_PATH=models/LLM/qwen2.5-1.5b-instruct-q4_k_m.gguf
+NLP_MODEL_TYPE=llama
+NLP_N_GPU_LAYERS=30             # GPU 卸载层数（无 GPU 设 0）
 LLM_MAX_TOKENS=150
 FUNCTION_CALLING_ENABLED=true
+LORA_ADAPTER_PATH=              # LoRA 微调适配器路径（可选）
 
 # ===== 视觉 =====
 VISION_ENABLED=false
